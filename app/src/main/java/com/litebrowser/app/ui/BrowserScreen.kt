@@ -64,7 +64,7 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(3.dp)
+                    .height(2.dp)
                     .background(Grey200)
             ) {
                 Box(

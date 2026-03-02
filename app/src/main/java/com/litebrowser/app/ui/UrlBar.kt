@@ -49,34 +49,34 @@ fun UrlBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(44.dp)
             .background(Grey50)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clickable(enabled = activeTab?.canGoBack == true) { onBack() },
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "‹",
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 color = if (activeTab?.canGoBack == true) Grey700 else Grey400,
             )
         }
 
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clickable(enabled = activeTab?.canGoForward == true) { onForward() },
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "›",
-                fontSize = 22.sp,
+                fontSize = 20.sp,
                 color = if (activeTab?.canGoForward == true) Grey700 else Grey400,
             )
         }
@@ -84,14 +84,14 @@ fun UrlBar(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(36.dp)
-                .background(White, RoundedCornerShape(18.dp))
+                .height(32.dp)
+                .background(White, RoundedCornerShape(16.dp))
                 .border(
-                    width = if (isFocused) 2.dp else 1.dp,
+                    width = if (isFocused) 1.5.dp else 1.dp,
                     color = if (isFocused) Blue600 else Grey200,
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(16.dp)
                 )
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = 10.dp)
                 .clickable {
                     inputText = activeTab?.url ?: ""
                     isFocused = true
@@ -99,9 +99,9 @@ fun UrlBar(
                     keyboardController?.show()
                 },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text("🔒", fontSize = 11.sp)
+            Text("🔒", fontSize = 10.sp)
 
             if (isFocused) {
                 BasicTextField(
@@ -118,7 +118,7 @@ fun UrlBar(
                         },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         color = Grey900,
                     ),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
@@ -135,7 +135,7 @@ fun UrlBar(
             } else {
                 Text(
                     text = activeTab?.url?.ifEmpty { "Search or type URL" } ?: "Search or type URL",
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     color = if (activeTab?.url.isNullOrEmpty()) Grey400 else Grey700,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -146,12 +146,12 @@ fun UrlBar(
             if (activeTab?.isDesktopMode == true) {
                 Box(
                     modifier = Modifier
-                        .background(Blue50, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .background(Blue50, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
                 ) {
                     Text(
                         "DESKTOP",
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         color = Blue600,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     )
@@ -161,20 +161,20 @@ fun UrlBar(
 
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clickable { onRefresh() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("↻", fontSize = 16.sp, color = Grey700)
+            Text("↻", fontSize = 14.sp, color = Grey700)
         }
 
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(28.dp)
                 .clickable { onMenuOpen() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("⋮", fontSize = 20.sp, color = Grey700)
+            Text("⋮", fontSize = 18.sp, color = Grey700)
         }
     }
 }

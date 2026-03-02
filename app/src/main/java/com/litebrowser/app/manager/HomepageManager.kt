@@ -25,35 +25,34 @@ object HomepageManager {
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 60px 20px;
+            padding: 30px 15px;
         }
         
         .logo {
-            font-size: 48px;
-            color: white;
-            margin-bottom: 10px;
+            font-size: 36px;
+            margin-bottom: 5px;
         }
         
         .app-name {
-            font-size: 32px;
+            font-size: 22px;
             font-weight: bold;
             color: white;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         
         .search-container {
             width: 100%;
-            max-width: 600px;
-            margin-bottom: 50px;
+            max-width: 400px;
+            margin-bottom: 25px;
         }
         
         .search-box {
             width: 100%;
-            padding: 16px 24px;
-            font-size: 18px;
+            padding: 12px 18px;
+            font-size: 15px;
             border: none;
-            border-radius: 30px;
+            border-radius: 25px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             outline: none;
         }
@@ -64,22 +63,23 @@ object HomepageManager {
         
         .quick-links {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
             width: 100%;
-            max-width: 400px;
+            max-width: 350px;
         }
         
         .quick-link {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 15px 20px;
+            padding: 12px 8px;
             background: rgba(255,255,255,0.2);
-            border-radius: 15px;
+            border-radius: 12px;
             color: white;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 500;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
@@ -87,12 +87,12 @@ object HomepageManager {
         
         .quick-link:hover {
             background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
+            transform: scale(1.05);
         }
         
         .quick-link .icon {
-            margin-right: 8px;
-            font-size: 18px;
+            font-size: 20px;
+            margin-bottom: 4px;
         }
     </style>
 </head>
@@ -114,7 +114,7 @@ object HomepageManager {
         <a href="https://www.facebook.com" class="quick-link">
             <span class="icon">📘</span> Facebook
         </a>
-        <a href="https://www.twitter.com" class="quick-link">
+        <a href="https://twitter.com" class="quick-link">
             <span class="icon">🐦</span> Twitter
         </a>
         <a href="https://www.instagram.com" class="quick-link">

@@ -23,17 +23,17 @@ import com.litebrowser.app.ui.theme.*
 
 @Composable
 fun TabStrip(
-    tabs:        List<BrowserTab>,
+    tabs: List<BrowserTab>,
     activeTabId: String?,
-    onTabClick:  (String) -> Unit,
-    onTabClose:  (String) -> Unit,
-    onNewTab:    () -> Unit,
-    modifier:    Modifier = Modifier,
+    onTabClick: (String) -> Unit,
+    onTabClose: (String) -> Unit,
+    onNewTab: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(36.dp)
             .background(Grey50)
             .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.Bottom,
@@ -43,8 +43,8 @@ fun TabStrip(
 
             Row(
                 modifier = Modifier
-                    .height(if (isActive) 36.dp else 32.dp)
-                    .widthIn(min = 90.dp, max = 140.dp)
+                    .height(if (isActive) 32.dp else 28.dp)
+                    .widthIn(min = 80.dp, max = 120.dp)
                     .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                     .background(if (isActive) White else Color.Transparent)
                     .drawBehind {
@@ -53,23 +53,23 @@ fun TabStrip(
                                 color = Color(0xFF1A73E8),
                                 start = Offset(0f, 0f),
                                 end = Offset(size.width, 0f),
-                                strokeWidth = 4.dp.toPx()
+                                strokeWidth = 3.dp.toPx()
                             )
                         }
                     }
                     .clickable { onTabClick(tab.id) }
-                    .padding(start = 12.dp, end = 10.dp),
+                    .padding(start = 8.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
-                    text = if (tab.url.isEmpty()) "✦" else "🌐",
-                    fontSize = 11.sp,
+                    text = if (tab.url.isEmpty() || tab.url.startsWith("about")) "✦" else "🌐",
+                    fontSize = 10.sp,
                 )
 
                 Text(
                     text = tab.title.ifEmpty { "New Tab" },
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     color = if (isActive) Grey900 else Grey700,
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
@@ -80,10 +80,10 @@ fun TabStrip(
                 if (tabs.size > 1) {
                     Text(
                         text = "×",
-                        fontSize = 14.sp,
+                        fontSize = 12.sp,
                         color = Grey600,
                         modifier = Modifier
-                            .size(18.dp)
+                            .size(16.dp)
                             .wrapContentSize()
                             .clickable { onTabClose(tab.id) },
                     )
@@ -93,7 +93,7 @@ fun TabStrip(
             Spacer(
                 modifier = Modifier
                     .width(1.dp)
-                    .height(32.dp)
+                    .height(28.dp)
                     .background(Grey200)
                     .align(Alignment.Bottom)
             )
@@ -101,15 +101,15 @@ fun TabStrip(
 
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .height(32.dp)
+                .width(36.dp)
+                .height(28.dp)
                 .align(Alignment.Bottom)
                 .clickable { onNewTab() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("+", fontSize = 18.sp, color = Grey700)
+            Text("+", fontSize = 16.sp, color = Grey700)
         }
 
-        Spacer(modifier = Modifier.weight(1f).height(40.dp).background(Grey50))
+        Spacer(modifier = Modifier.weight(1f).height(36.dp).background(Grey50))
     }
 }

@@ -66,11 +66,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun openNewTab() {
-        val currentActiveTab = activeTab
-        if (currentActiveTab != null && currentActiveTab.webView != null) {
-            tabManager.pauseWebView(currentActiveTab.webView!!)
-        }
-
         val newTab = createTab()
 
         _tabs.value = _tabs.value + newTab
@@ -87,11 +82,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun switchToTab(tabId: String) {
         if (tabId == _activeTabId.value) return
-
-        val currentActiveTab = activeTab
-        if (currentActiveTab != null && currentActiveTab.webView != null) {
-            tabManager.pauseWebView(currentActiveTab.webView!!)
-        }
 
         val targetTab = _tabs.value.find { it.id == tabId } ?: return
 
@@ -117,10 +107,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             targetTab.webView = wv
             targetTab.savedState = null
             
-            tabManager.resumeWebView(wv)
             tabManager.applyZoomImmediate(wv, targetTab.zoomLevel)
         } else {
-            tabManager.resumeWebView(targetTab.webView!!)
             tabManager.applyZoomImmediate(targetTab.webView!!, targetTab.zoomLevel)
         }
 
@@ -145,7 +133,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 val nextIndex = (tabIndex - 1).coerceAtLeast(0)
                 val nextTab = remaining[nextIndex]
                 if (nextTab.webView != null) {
-                    tabManager.resumeWebView(nextTab.webView!!)
                     tabManager.applyZoomImmediate(nextTab.webView!!, nextTab.zoomLevel)
                 }
                 _activeTabId.value = nextTab.id
