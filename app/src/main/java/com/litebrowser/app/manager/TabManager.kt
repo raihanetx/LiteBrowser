@@ -15,11 +15,11 @@ class TabManager(private val context: Context) {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    var onPageStarted:     (tabId: String, url: String) -> Unit = { _, _ -> }
-    var onPageFinished:    (tabId: String, url: String, title: String) -> Unit = { _, _, _ -> }
+    var onPageStarted: (tabId: String, url: String) -> Unit = { _, _ -> }
+    var onPageFinished: (tabId: String, url: String, title: String) -> Unit = { _, _, _ -> }
     var onProgressChanged: (tabId: String, progress: Int) -> Unit = { _, _ -> }
-    var onHistoryChanged:  (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit = { _, _, _ -> }
-    var getTabZoomLevel:   (tabId: String) -> Int = { 100 }
+    var onHistoryChanged: (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit = { _, _, _ -> }
+    var getTabZoomLevel: (tabId: String) -> Int = { 100 }
     var getTabDesktopMode: (tabId: String) -> Boolean = { false }
 
     fun createWebView(tab: BrowserTab): WebView {
@@ -40,11 +40,9 @@ class TabManager(private val context: Context) {
             cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        val tabId = tab.id
-        val isDesktopMode = tab.isDesktopMode
-        val currentZoom = tab.zoomLevel
+        applyUserAgentSettings(wv, tab.isDesktopMode)
 
-        applyUserAgentSettings(wv, isDesktopMode)
+        val tabId = tab.id
 
         wv.webViewClient = object : WebViewClient() {
 
@@ -55,17 +53,12 @@ class TabManager(private val context: Context) {
 
             override fun onPageFinished(view: WebView, url: String) {
                 val zoomLevel = getTabZoomLevel(tabId)
-                val isDesktop = getTabDesktopMode(tabId)
                 
                 applyZoomImmediate(view, zoomLevel)
                 
                 handler.postDelayed({
                     applyZoomImmediate(view, zoomLevel)
-                }, 50)
-                
-                handler.postDelayed({
-                    applyZoomImmediate(view, zoomLevel)
-                }, 150)
+                }, 100)
                 
                 handler.postDelayed({
                     applyZoomImmediate(view, zoomLevel)
@@ -75,7 +68,14 @@ class TabManager(private val context: Context) {
                 onHistoryChanged(tabId, view.canGoBack(), view.canGoForward())
             }
 
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                return false
+            }
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest
+            ): Boolean {
                 return false
             }
         }

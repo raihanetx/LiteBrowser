@@ -8,11 +8,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -20,22 +24,25 @@ import androidx.compose.ui.unit.sp
 import com.litebrowser.app.model.BrowserTab
 import com.litebrowser.app.ui.theme.*
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun UrlBar(
-    activeTab:   BrowserTab?,
-    onNavigate:  (String) -> Unit,
-    onBack:      () -> Unit,
-    onForward:   () -> Unit,
-    onRefresh:   () -> Unit,
-    onMenuOpen:  () -> Unit,
-    modifier:    Modifier = Modifier,
+    activeTab: BrowserTab?,
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit,
+    onForward: () -> Unit,
+    onRefresh: () -> Unit,
+    onMenuOpen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    var inputText by remember { mutableStateOf("") }
+    var inputText by remember(activeTab?.id) { mutableStateOf("") }
     var isFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    LaunchedEffect(activeTab?.url) {
-        if (!isFocused) {
-            inputText = activeTab?.url ?: ""
+    LaunchedEffect(activeTab?.url, activeTab?.id) {
+        if (!isFocused && activeTab != null) {
+            inputText = activeTab.url
         }
     }
 
@@ -84,7 +91,13 @@ fun UrlBar(
                     color = if (isFocused) Blue600 else Grey200,
                     shape = RoundedCornerShape(18.dp)
                 )
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = 14.dp)
+                .clickable {
+                    inputText = activeTab?.url ?: ""
+                    isFocused = true
+                    focusRequester.requestFocus()
+                    keyboardController?.show()
+                },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -96,7 +109,13 @@ fun UrlBar(
                     onValueChange = { inputText = it },
                     modifier = Modifier
                         .weight(1f)
-                        .onFocusChanged { isFocused = it.isFocused },
+                        .focusRequester(focusRequester)
+                        .onFocusChanged {
+                            isFocused = it.isFocused
+                            if (!it.isFocused) {
+                                keyboardController?.hide()
+                            }
+                        },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontSize = 13.sp,
@@ -105,8 +124,11 @@ fun UrlBar(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                     keyboardActions = KeyboardActions(
                         onGo = {
-                            onNavigate(inputText)
-                            isFocused = false
+                            if (inputText.isNotBlank()) {
+                                onNavigate(inputText)
+                                isFocused = false
+                                keyboardController?.hide()
+                            }
                         }
                     ),
                 )
@@ -117,12 +139,7 @@ fun UrlBar(
                     color = if (activeTab?.url.isNullOrEmpty()) Grey400 else Grey700,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable {
-                            inputText = activeTab?.url ?: ""
-                            isFocused = true
-                        },
+                    modifier = Modifier.weight(1f),
                 )
             }
 

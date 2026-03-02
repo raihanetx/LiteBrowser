@@ -2,7 +2,9 @@ package com.litebrowser.app.viewmodel
 
 import android.app.Application
 import android.os.Bundle
+import android.webkit.WebSettings
 import androidx.lifecycle.AndroidViewModel
+import com.litebrowser.app.manager.HomepageManager
 import com.litebrowser.app.manager.TabManager
 import com.litebrowser.app.model.BrowserTab
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,10 +25,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     val activeTab: BrowserTab?
         get() = _tabs.value.find { it.id == _activeTabId.value }
 
-    private val HOMEPAGE = "https://www.google.com"
-    val ZOOM_MIN = 50
-    val ZOOM_MAX = 300
-    val ZOOM_STEP = 25
+    private val HOMEPAGE = "about:blank"
+    private val ZOOM_MIN = 50
+    private val ZOOM_MAX = 300
+    private val ZOOM_STEP = 25
 
     init {
         openNewTab()
@@ -74,7 +76,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _tabs.value = _tabs.value + newTab
         _activeTabId.value = newTab.id
 
-        newTab.webView?.loadUrl(HOMEPAGE)
+        newTab.webView?.loadDataWithBaseURL(
+            "https://litebrowser.local",
+            HomepageManager.getHomepageHtml(),
+            "text/html",
+            "UTF-8",
+            null
+        )
     }
 
     fun switchToTab(tabId: String) {
@@ -94,7 +102,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 wv.restoreState(savedState)
             } else {
                 val url = targetTab.url.ifEmpty { HOMEPAGE }
-                wv.loadUrl(url)
+                if (url == HOMEPAGE) {
+                    wv.loadDataWithBaseURL(
+                        "https://litebrowser.local",
+                        HomepageManager.getHomepageHtml(),
+                        "text/html",
+                        "UTF-8",
+                        null
+                    )
+                } else {
+                    wv.loadUrl(url)
+                }
             }
             targetTab.webView = wv
             targetTab.savedState = null
@@ -230,7 +248,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val newWebView = tabManager.createWebView(tab)
         tab.webView = newWebView
         
-        newWebView.loadUrl(currentUrl)
+        if (currentUrl == HOMEPAGE || currentUrl.startsWith("about:")) {
+            newWebView.loadDataWithBaseURL(
+                "https://litebrowser.local",
+                HomepageManager.getHomepageHtml(),
+                "text/html",
+                "UTF-8",
+                null
+            )
+        } else {
+            newWebView.loadUrl(currentUrl)
+        }
     }
 
     fun onLowMemory() {
@@ -273,7 +301,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         return when {
             trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
             trimmed.contains(".") && !trimmed.contains(" ") -> "https://$trimmed"
-            else -> "https://www.google.com/search?q=${trimmed.replace(" ", "+")}"
+            else -> "${HomepageManager.SEARCH_ENGINE}${trimmed.replace(" ", "+")}"
         }
     }
 }
