@@ -33,7 +33,7 @@ fun TabStrip(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(36.dp)
+            .height(38.dp)
             .background(Grey50)
             .horizontalScroll(rememberScrollState()),
         verticalAlignment = Alignment.Bottom,
@@ -43,14 +43,15 @@ fun TabStrip(
 
             Row(
                 modifier = Modifier
-                    .height(if (isActive) 32.dp else 28.dp)
-                    .widthIn(min = 80.dp, max = 120.dp)
-                    .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                    .background(if (isActive) White else Color.Transparent)
+                    .height(if (isActive) 34.dp else 30.dp)
+                    .widthIn(min = 100.dp, max = 160.dp)
+                    .padding(end = if (isActive) 0.dp else 1.dp)
+                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                    .background(if (isActive) White else Grey100)
                     .drawBehind {
                         if (isActive) {
                             drawLine(
-                                color = Color(0xFF1A73E8),
+                                color = Blue600,
                                 start = Offset(0f, 0f),
                                 end = Offset(size.width, 0f),
                                 strokeWidth = 3.dp.toPx()
@@ -58,18 +59,18 @@ fun TabStrip(
                         }
                     }
                     .clickable { onTabClick(tab.id) }
-                    .padding(start = 8.dp, end = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Text(
                     text = if (tab.url.isEmpty() || tab.url.startsWith("about")) "✦" else "🌐",
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                 )
 
                 Text(
                     text = tab.title.ifEmpty { "New Tab" },
-                    fontSize = 10.sp,
+                    fontSize = 12.sp,
                     color = if (isActive) Grey900 else Grey700,
                     fontWeight = if (isActive) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
@@ -78,38 +79,34 @@ fun TabStrip(
                 )
 
                 if (tabs.size > 1) {
-                    Text(
-                        text = "×",
-                        fontSize = 12.sp,
-                        color = Grey600,
+                    Box(
                         modifier = Modifier
-                            .size(16.dp)
-                            .wrapContentSize()
+                            .size(18.dp)
+                            .clip(RoundedCornerShape(4.dp))
                             .clickable { onTabClose(tab.id) },
-                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "✕",
+                            fontSize = 12.sp,
+                            color = Grey500,
+                        )
+                    }
                 }
             }
-
-            Spacer(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(28.dp)
-                    .background(Grey200)
-                    .align(Alignment.Bottom)
-            )
         }
 
         Box(
             modifier = Modifier
-                .width(36.dp)
-                .height(28.dp)
-                .align(Alignment.Bottom)
+                .padding(start = 4.dp)
+                .size(32.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .clickable { onNewTab() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("+", fontSize = 16.sp, color = Grey700)
+            Text("+", fontSize = 20.sp, color = Grey600, fontWeight = FontWeight.Medium)
         }
 
-        Spacer(modifier = Modifier.weight(1f).height(36.dp).background(Grey50))
+        Spacer(modifier = Modifier.width(8.dp))
     }
 }

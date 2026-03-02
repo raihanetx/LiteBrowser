@@ -17,6 +17,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,49 +50,54 @@ fun UrlBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(44.dp)
+            .height(48.dp)
             .background(Grey50)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // Back Button
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clickable(enabled = activeTab?.canGoBack == true) { onBack() },
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                "‹",
+                "←",
                 fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
                 color = if (activeTab?.canGoBack == true) Grey700 else Grey400,
             )
         }
 
+        // Forward Button
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clickable(enabled = activeTab?.canGoForward == true) { onForward() },
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                "›",
+                "→",
                 fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
                 color = if (activeTab?.canGoForward == true) Grey700 else Grey400,
             )
         }
 
+        // URL Field
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(32.dp)
-                .background(White, RoundedCornerShape(16.dp))
+                .height(36.dp)
+                .background(White, RoundedCornerShape(18.dp))
                 .border(
                     width = if (isFocused) 1.5.dp else 1.dp,
-                    color = if (isFocused) Blue600 else Grey200,
-                    shape = RoundedCornerShape(16.dp)
+                    color = if (isFocused) Blue600 else Grey300,
+                    shape = RoundedCornerShape(18.dp)
                 )
-                .padding(horizontal = 10.dp)
+                .padding(horizontal = 12.dp)
                 .clickable {
                     inputText = activeTab?.url ?: ""
                     isFocused = true
@@ -99,9 +105,14 @@ fun UrlBar(
                     keyboardController?.show()
                 },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text("🔒", fontSize = 10.sp)
+            // Security Icon
+            val isSecure = activeTab?.url?.startsWith("https://") == true
+            Text(
+                text = if (isSecure) "🔒" else "⚠️",
+                fontSize = 12.sp,
+            )
 
             if (isFocused) {
                 BasicTextField(
@@ -118,7 +129,7 @@ fun UrlBar(
                         },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = Grey900,
                     ),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
@@ -133,48 +144,63 @@ fun UrlBar(
                     ),
                 )
             } else {
+                val displayText = when {
+                    activeTab?.url.isNullOrEmpty() -> "Search or enter address"
+                    activeTab.url.startsWith("about:") -> "Home"
+                    activeTab.url.startsWith("https://lite.duckduckgo.com") -> "DuckDuckGo Lite Search"
+                    else -> activeTab.url.replace("https://", "").replace("http://", "").substringBefore("/")
+                }
+                
                 Text(
-                    text = activeTab?.url?.ifEmpty { "Search or type URL" } ?: "Search or type URL",
-                    fontSize = 12.sp,
-                    color = if (activeTab?.url.isNullOrEmpty()) Grey400 else Grey700,
+                    text = displayText,
+                    fontSize = 13.sp,
+                    color = if (activeTab?.url.isNullOrEmpty() || activeTab?.url?.startsWith("about:") == true) Grey500 else Grey800,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
             }
 
+            // Desktop Mode Badge
             if (activeTab?.isDesktopMode == true) {
                 Box(
                     modifier = Modifier
-                        .background(Blue50, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                        .background(Blue50, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         "DESKTOP",
-                        fontSize = 8.sp,
+                        fontSize = 9.sp,
                         color = Blue600,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
         }
 
+        // Refresh Button
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clickable { onRefresh() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("↻", fontSize = 14.sp, color = Grey700)
+            Text("↻", fontSize = 18.sp, color = Grey600)
         }
 
+        // Menu Button
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(32.dp)
                 .clickable { onMenuOpen() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("⋮", fontSize = 18.sp, color = Grey700)
+            Text(
+                "⋮",
+                fontSize = 20.sp,
+                color = Grey600,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
