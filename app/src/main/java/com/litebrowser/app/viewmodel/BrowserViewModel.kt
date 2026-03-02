@@ -74,8 +74,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
             updateTab(tabId) { it.copy(webView = wv, savedState = null) }
             tabManager.resumeWebView(wv)
+            tabManager.applyZoom(wv, target.zoomLevel)
         } else {
-            target.webView?.let { tabManager.resumeWebView(it) }
+            target.webView?.let { wv ->
+                tabManager.resumeWebView(wv)
+                tabManager.applyZoom(wv, target.zoomLevel)
+            }
         }
 
         _activeTabId.value = tabId
@@ -143,8 +147,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val newMode = !tab.isDesktopMode
         updateTab(tab.id) { it.copy(isDesktopMode = newMode) }
         tab.webView?.let { wv ->
-            tabManager.applyUserAgent(wv, newMode)
-            wv.reload()
+            tabManager.applyUserAgent(wv, newMode, reload = true)
         }
     }
 

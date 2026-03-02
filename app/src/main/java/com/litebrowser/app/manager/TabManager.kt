@@ -88,16 +88,19 @@ class TabManager(private val context: Context) {
         )
     }
 
-    fun applyUserAgent(wv: WebView, desktopMode: Boolean) {
+    fun applyUserAgent(wv: WebView, desktopMode: Boolean, reload: Boolean = false) {
         wv.settings.userAgentString = if (desktopMode) {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
             "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         } else {
-            null
+            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
         }
-        if (desktopMode) {
-            wv.settings.useWideViewPort        = true
-            wv.settings.loadWithOverviewMode   = true
+        wv.settings.useWideViewPort = true
+        wv.settings.loadWithOverviewMode = true
+        
+        if (reload) {
+            wv.clearCache(true)
+            wv.reload()
         }
     }
 }
