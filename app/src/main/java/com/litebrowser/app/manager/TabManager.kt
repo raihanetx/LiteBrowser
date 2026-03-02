@@ -15,65 +15,78 @@ class TabManager(private val context: Context) {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    var onPageStarted:     (tabId: String, url: String) -> Unit                          = { _, _ -> }
-    var onPageFinished:    (tabId: String, url: String, title: String) -> Unit           = { _, _, _ -> }
-    var onProgressChanged: (tabId: String, progress: Int) -> Unit                        = { _, _ -> }
-    var onHistoryChanged:  (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit    = { _, _, _ -> }
+    var onPageStarted:     (tabId: String, url: String) -> Unit = { _, _ -> }
+    var onPageFinished:    (tabId: String, url: String, title: String) -> Unit = { _, _, _ -> }
+    var onProgressChanged: (tabId: String, progress: Int) -> Unit = { _, _ -> }
+    var onHistoryChanged:  (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit = { _, _, _ -> }
     var getTabZoomLevel:   (tabId: String) -> Int = { 100 }
+    var getTabDesktopMode: (tabId: String) -> Boolean = { false }
 
     fun createWebView(tab: BrowserTab): WebView {
         val wv = WebView(context)
 
         wv.settings.apply {
-            javaScriptEnabled                 = true
-            domStorageEnabled                 = true
-            databaseEnabled                   = true
-            allowFileAccess                   = true
-            loadWithOverviewMode              = true
-            useWideViewPort                   = true
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            allowFileAccess = true
+            loadWithOverviewMode = true
+            useWideViewPort = true
             setSupportZoom(false)
-            builtInZoomControls               = false
-            displayZoomControls               = false
-            mediaPlaybackRequiresUserGesture  = false
-            mixedContentMode                  = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            cacheMode                         = WebSettings.LOAD_DEFAULT
+            builtInZoomControls = false
+            displayZoomControls = false
+            mediaPlaybackRequiresUserGesture = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+            cacheMode = WebSettings.LOAD_DEFAULT
         }
 
-        applyUserAgent(wv, tab.isDesktopMode)
+        val tabId = tab.id
+        val isDesktopMode = tab.isDesktopMode
+        val currentZoom = tab.zoomLevel
+
+        applyUserAgentSettings(wv, isDesktopMode)
 
         wv.webViewClient = object : WebViewClient() {
 
             override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-                onPageStarted(tab.id, url)
-                onHistoryChanged(tab.id, view.canGoBack(), view.canGoForward())
+                onPageStarted(tabId, url)
+                onHistoryChanged(tabId, view.canGoBack(), view.canGoForward())
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                val zoomLevel = getTabZoomLevel(tab.id)
-                applyZoom(view, zoomLevel)
+                val zoomLevel = getTabZoomLevel(tabId)
+                val isDesktop = getTabDesktopMode(tabId)
+                
+                applyZoomImmediate(view, zoomLevel)
                 
                 handler.postDelayed({
-                    applyZoom(view, zoomLevel)
-                }, 100)
+                    applyZoomImmediate(view, zoomLevel)
+                }, 50)
+                
+                handler.postDelayed({
+                    applyZoomImmediate(view, zoomLevel)
+                }, 150)
+                
+                handler.postDelayed({
+                    applyZoomImmediate(view, zoomLevel)
+                }, 300)
 
-                onPageFinished(tab.id, url, view.title ?: url)
-                onHistoryChanged(tab.id, view.canGoBack(), view.canGoForward())
+                onPageFinished(tabId, url, view.title ?: url)
+                onHistoryChanged(tabId, view.canGoBack(), view.canGoForward())
             }
 
-            override fun shouldOverrideUrlLoading(
-                view: WebView,
-                request: WebResourceRequest
-            ): Boolean {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 return false
             }
         }
 
         wv.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView, newProgress: Int) {
-                onProgressChanged(tab.id, newProgress)
+                onProgressChanged(tabId, newProgress)
             }
+
             override fun onReceivedTitle(view: WebView, title: String) {
-                onPageFinished(tab.id, view.url ?: "", title)
+                onPageFinished(tabId, view.url ?: "", title)
             }
         }
 
@@ -81,36 +94,40 @@ class TabManager(private val context: Context) {
     }
 
     fun pauseWebView(wv: WebView) {
-        wv.onPause()
-        wv.pauseTimers()
+        try {
+            wv.onPause()
+            wv.pauseTimers()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun resumeWebView(wv: WebView) {
-        wv.resumeTimers()
-        wv.onResume()
+        try {
+            wv.resumeTimers()
+            wv.onResume()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    fun applyZoom(wv: WebView, zoomPercent: Int) {
-        val scale = zoomPercent / 100.0
-        wv.evaluateJavascript(
-            "document.documentElement.style.zoom = '$scale'",
-            null
-        )
+    fun applyZoomImmediate(wv: WebView?, zoomPercent: Int) {
+        if (wv == null) return
+        try {
+            val scale = zoomPercent / 100.0
+            wv.evaluateJavascript("document.documentElement.style.zoom = '$scale'", null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    fun applyUserAgent(wv: WebView, desktopMode: Boolean, reload: Boolean = false) {
+    fun applyUserAgentSettings(wv: WebView, desktopMode: Boolean) {
         wv.settings.userAgentString = if (desktopMode) {
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         } else {
-            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+            "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
         }
         wv.settings.useWideViewPort = true
         wv.settings.loadWithOverviewMode = true
-        
-        if (reload) {
-            wv.clearCache(true)
-            wv.reload()
-        }
     }
 }

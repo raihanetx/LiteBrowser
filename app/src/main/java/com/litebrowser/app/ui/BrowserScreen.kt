@@ -14,9 +14,9 @@ import com.litebrowser.app.viewmodel.BrowserViewModel
 
 @Composable
 fun BrowserScreen(viewModel: BrowserViewModel) {
-    val tabs        by viewModel.tabs.collectAsStateWithLifecycle()
+    val tabs by viewModel.tabs.collectAsStateWithLifecycle()
     val activeTabId by viewModel.activeTabId.collectAsStateWithLifecycle()
-    val activeTab      = tabs.find { it.id == activeTabId }
+    val activeTab = tabs.find { it.id == activeTabId }
 
     var menuOpen by remember { mutableStateOf(false) }
 
@@ -32,30 +32,30 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
             .systemBarsPadding()
     ) {
         TabStrip(
-            tabs        = tabs,
+            tabs = tabs,
             activeTabId = activeTabId,
-            onTabClick  = { viewModel.switchToTab(it) },
-            onTabClose  = { viewModel.closeTab(it) },
-            onNewTab    = { viewModel.openNewTab() },
+            onTabClick = { viewModel.switchToTab(it) },
+            onTabClose = { viewModel.closeTab(it) },
+            onNewTab = { viewModel.openNewTab() },
         )
 
         Box {
             UrlBar(
-                activeTab  = activeTab,
+                activeTab = activeTab,
                 onNavigate = { viewModel.navigate(it) },
-                onBack     = { viewModel.goBack() },
-                onForward  = { viewModel.goForward() },
-                onRefresh  = { viewModel.refresh() },
+                onBack = { viewModel.goBack() },
+                onForward = { viewModel.goForward() },
+                onRefresh = { viewModel.refresh() },
                 onMenuOpen = { menuOpen = true },
             )
 
             BrowserMenu(
-                expanded        = menuOpen,
-                activeTab       = activeTab,
-                onDismiss       = { menuOpen = false },
-                onZoomIn        = { viewModel.zoomIn() },
-                onZoomOut       = { viewModel.zoomOut() },
-                onZoomReset     = { viewModel.zoomReset() },
+                expanded = menuOpen,
+                activeTab = activeTab,
+                onDismiss = { menuOpen = false },
+                onZoomIn = { viewModel.zoomIn() },
+                onZoomOut = { viewModel.zoomOut() },
+                onZoomReset = { viewModel.zoomReset() },
                 onToggleDesktop = { viewModel.toggleDesktopMode(); menuOpen = false },
             )
         }
@@ -79,9 +79,9 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
         Box(modifier = Modifier.fillMaxSize()) {
             activeTab?.let { tab ->
                 if (tab.webView != null) {
-                    key(tab.id) {
+                    key("${tab.id}_${tab.isDesktopMode}") {
                         WebViewContainer(
-                            tab      = tab,
+                            tab = tab,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
