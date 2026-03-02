@@ -28,29 +28,35 @@ object HomepageManager {
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             padding: 40px 20px;
         }
         
-        .header {
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .logo-section {
             text-align: center;
             margin-bottom: 40px;
         }
         
-        .logo-container {
-            width: 72px;
-            height: 72px;
+        .logo {
+            width: 80px;
+            height: 80px;
             background: #000000;
-            border-radius: 16px;
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 16px;
-            border: 2px solid #000000;
         }
         
-        .logo-icon {
-            font-size: 36px;
-            color: white;
+        .logo-text {
+            font-size: 40px;
+            font-weight: bold;
+            color: #ffffff;
         }
         
         .app-name {
@@ -58,42 +64,21 @@ object HomepageManager {
             font-weight: 700;
             color: #000000;
             margin-bottom: 4px;
-            letter-spacing: -0.5px;
         }
         
         .tagline {
-            font-size: 13px;
-            color: #616161;
-            font-weight: 400;
+            font-size: 14px;
+            color: #666666;
         }
         
-        .search-section {
-            width: 100%;
-            max-width: 480px;
-            margin-bottom: 30px;
-        }
-        
-        .search-container {
+        .search-box {
             background: #ffffff;
-            border-radius: 28px;
             border: 2px solid #000000;
+            border-radius: 30px;
             display: flex;
             align-items: center;
             padding: 4px;
-        }
-        
-        .search-container:focus-within {
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        }
-        
-        .search-icon {
-            width: 44px;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #000000;
-            font-size: 18px;
+            margin-bottom: 40px;
         }
         
         .search-input {
@@ -101,141 +86,134 @@ object HomepageManager {
             border: none;
             outline: none;
             font-size: 16px;
-            padding: 12px 8px;
+            padding: 12px 16px;
             background: transparent;
             color: #000000;
         }
         
         .search-input::placeholder {
-            color: #9e9e9e;
+            color: #999999;
         }
         
         .search-btn {
             background: #000000;
-            color: white;
+            color: #ffffff;
             border: none;
             padding: 12px 24px;
-            border-radius: 22px;
+            border-radius: 26px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
         }
         
         .quick-links {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
-            width: 100%;
-            max-width: 400px;
+            gap: 16px;
         }
         
-        .quick-link {
+        .link-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-decoration: none;
             padding: 16px 8px;
-            background: #ffffff;
+            background: #f5f5f5;
             border-radius: 12px;
-            border: 2px solid #e0e0e0;
             transition: all 0.2s;
         }
         
-        .quick-link:hover {
-            border-color: #000000;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .link-item:hover {
+            background: #000000;
+        }
+        
+        .link-item:hover .link-icon,
+        .link-item:hover .link-label {
+            color: #ffffff;
         }
         
         .link-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
+            font-size: 24px;
             margin-bottom: 8px;
-            background: #f5f5f5;
-            border: 1px solid #e0e0e0;
+            color: #000000;
         }
         
         .link-label {
-            font-size: 11px;
-            color: #424242;
+            font-size: 12px;
+            color: #333333;
             font-weight: 500;
         }
         
-        @media (max-width: 380px) {
+        @media (max-width: 400px) {
             .quick-links {
                 grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
             }
         }
     </style>
 </head>
 <body>
-    <header class="header">
-        <div class="logo-container">
-            <div class="logo-icon">E</div>
+    <div class="container">
+        <div class="logo-section">
+            <div class="logo">
+                <span class="logo-text">E</span>
+            </div>
+            <h1 class="app-name">LitEBrowser</h1>
+            <p class="tagline">Fast • Lightweight • Private</p>
         </div>
-        <h1 class="app-name">LitEBrowser</h1>
-        <p class="tagline">Fast • Lightweight • Private</p>
-    </header>
-    
-    <section class="search-section">
-        <div class="search-container">
-            <span class="search-icon">&#128269;</span>
+        
+        <div class="search-box">
             <input 
                 type="text" 
                 class="search-input" 
-                placeholder="Search or type URL..." 
+                placeholder="Search or enter URL..." 
                 id="searchInput"
                 autocomplete="off"
             >
-            <button class="search-btn" onclick="performSearch()">Search</button>
+            <button class="search-btn" onclick="search()">Go</button>
         </div>
-    </section>
-    
-    <nav class="quick-links">
-        <a href="https://www.google.com" class="quick-link">
-            <div class="link-icon">G</div>
-            <span class="link-label">Google</span>
-        </a>
-        <a href="https://www.youtube.com" class="quick-link">
-            <div class="link-icon">Y</div>
-            <span class="link-label">YouTube</span>
-        </a>
-        <a href="https://www.facebook.com" class="quick-link">
-            <div class="link-icon">F</div>
-            <span class="link-label">Facebook</span>
-        </a>
-        <a href="https://twitter.com" class="quick-link">
-            <div class="link-icon">T</div>
-            <span class="link-label">Twitter</span>
-        </a>
-        <a href="https://www.instagram.com" class="quick-link">
-            <div class="link-icon">I</div>
-            <span class="link-label">Instagram</span>
-        </a>
-        <a href="https://www.reddit.com" class="quick-link">
-            <div class="link-icon">R</div>
-            <span class="link-label">Reddit</span>
-        </a>
-        <a href="https://github.com" class="quick-link">
-            <div class="link-icon">Gi</div>
-            <span class="link-label">GitHub</span>
-        </a>
-        <a href="https://www.wikipedia.org" class="quick-link">
-            <div class="link-icon">W</div>
-            <span class="link-label">Wiki</span>
-        </a>
-    </nav>
+        
+        <div class="quick-links">
+            <a href="https://www.google.com" class="link-item">
+                <span class="link-icon">G</span>
+                <span class="link-label">Google</span>
+            </a>
+            <a href="https://www.youtube.com" class="link-item">
+                <span class="link-icon">Y</span>
+                <span class="link-label">YouTube</span>
+            </a>
+            <a href="https://www.facebook.com" class="link-item">
+                <span class="link-icon">F</span>
+                <span class="link-label">Facebook</span>
+            </a>
+            <a href="https://twitter.com" class="link-item">
+                <span class="link-icon">T</span>
+                <span class="link-label">Twitter</span>
+            </a>
+            <a href="https://www.instagram.com" class="link-item">
+                <span class="link-icon">I</span>
+                <span class="link-label">Instagram</span>
+            </a>
+            <a href="https://www.reddit.com" class="link-item">
+                <span class="link-icon">R</span>
+                <span class="link-label">Reddit</span>
+            </a>
+            <a href="https://github.com" class="link-item">
+                <span class="link-icon">GH</span>
+                <span class="link-label">GitHub</span>
+            </a>
+            <a href="https://www.wikipedia.org" class="link-item">
+                <span class="link-icon">W</span>
+                <span class="link-label">Wiki</span>
+            </a>
+        </div>
+    </div>
 
     <script>
-        function performSearch() {
+        function search() {
             const input = document.getElementById('searchInput').value.trim();
             if (input) {
-                if (input.includes('.') && !input.includes(' ') && input.length > 3) {
+                if (input.includes('.') && !input.includes(' ')) {
                     if (!input.startsWith('http')) input = 'https://' + input;
                     window.location.href = input;
                 } else {
@@ -245,7 +223,7 @@ object HomepageManager {
         }
         
         document.getElementById('searchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') performSearch();
+            if (e.key === 'Enter') search();
         });
     </script>
 </body>

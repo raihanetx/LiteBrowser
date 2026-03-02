@@ -55,10 +55,11 @@ fun UrlBar(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
+        shadowElevation = 4.dp,
         color = Grey50
     ) {
         Column {
+            // Progress bar (loading indicator)
             if (activeTab?.isLoading == true) {
                 LinearProgressIndicator(
                     progress = { (activeTab.progress) / 100f },
@@ -70,51 +71,58 @@ fun UrlBar(
                 )
             }
             
+            // Main controls row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .height(60.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                // Back Button
                 IconButton(
                     onClick = onBack,
                     enabled = activeTab?.canGoBack == true,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(44.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (activeTab?.canGoBack == true) Black else Grey400
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        modifier = Modifier.size(24.dp),
-                        tint = if (activeTab?.canGoBack == true) Black else Grey400
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
+                // Forward Button
                 IconButton(
                     onClick = onForward,
                     enabled = activeTab?.canGoForward == true,
-                    modifier = Modifier.size(44.dp)
+                    modifier = Modifier.size(44.dp),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (activeTab?.canGoForward == true) Black else Grey400
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Forward",
-                        modifier = Modifier.size(24.dp),
-                        tint = if (activeTab?.canGoForward == true) Black else Grey400
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
+                // URL Field - Center piece
                 Surface(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp),
                     shape = RoundedCornerShape(22.dp),
                     color = White,
-                    shadowElevation = if (isFocused) 4.dp else 2.dp,
-                    border = androidx.compose.foundation.BorderStroke(
-                        if (isFocused) 2.dp else 1.dp,
-                        if (isFocused) Black else Grey300
-                    )
+                    shadowElevation = if (isFocused) 4.dp else 1.dp,
+                    border = if (isFocused) {
+                        androidx.compose.foundation.BorderStroke(2.dp, Black)
+                    } else null
                 ) {
                     Row(
                         modifier = Modifier
@@ -167,14 +175,14 @@ fun UrlBar(
                             )
                         } else {
                             val displayText = when {
-                                activeTab?.url.isNullOrEmpty() -> "Search or enter address"
+                                activeTab?.url.isNullOrEmpty() -> "Search or type URL"
                                 activeTab.url.startsWith("about:") -> "Home"
                                 activeTab.url.startsWith("https://lite.duckduckgo.com") -> "Search"
                                 else -> activeTab.url
                                     .replace("https://", "")
                                     .replace("http://", "")
                                     .substringBefore("/")
-                                    .take(25)
+                                    .take(28)
                             }
                             
                             Text(
@@ -187,25 +195,26 @@ fun UrlBar(
                             )
                         }
 
+                        // Desktop badge (small)
                         if (activeTab?.isDesktopMode == true) {
                             Surface(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp)),
+                                shape = RoundedCornerShape(4.dp),
                                 color = Grey200,
-                                shape = RoundedCornerShape(4.dp)
+                                modifier = Modifier.height(20.dp)
                             ) {
                                 Text(
-                                    "Desktop",
+                                    "D",
                                     fontSize = 10.sp,
                                     color = Black,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
                     }
                 }
 
+                // Refresh Button
                 IconButton(
                     onClick = onRefresh,
                     modifier = Modifier.size(44.dp)
@@ -218,6 +227,7 @@ fun UrlBar(
                     )
                 }
 
+                // Menu Button
                 IconButton(
                     onClick = onMenuOpen,
                     modifier = Modifier.size(44.dp)

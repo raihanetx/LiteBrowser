@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.litebrowser.app.model.BrowserTab
@@ -37,16 +38,17 @@ fun BrowserMenu(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             containerColor = White,
-            tonalElevation = 8.dp
+            tonalElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp, top = 8.dp)
             ) {
+                // Drag handle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -55,38 +57,41 @@ fun BrowserMenu(
                 ) {
                     Box(
                         modifier = Modifier
-                            .width(40.dp)
+                            .width(48.dp)
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(Grey300)
                     )
                 }
                 
+                // Title
                 Text(
-                    "Menu",
-                    fontSize = 20.sp,
+                    "Settings",
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Black,
-                    modifier = Modifier.padding(bottom = 20.dp)
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
                 
+                // Zoom Control
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Grey50),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            "Zoom Level",
+                            "Zoom",
                             fontSize = 14.sp,
                             color = Grey600,
                             fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.padding(bottom = 16.dp)
                         )
                         
                         Row(
@@ -98,14 +103,17 @@ fun BrowserMenu(
                             val zoomAtMax = (activeTab?.zoomLevel ?: 100) >= 300
                             val currentZoom = activeTab?.zoomLevel ?: 100
 
-                            FilledIconButton(
+                            // Zoom Out
+                            Button(
                                 onClick = onZoomOut,
                                 enabled = !zoomAtMin,
                                 modifier = Modifier.size(48.dp),
-                                colors = IconButtonDefaults.filledIconButtonColors(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
                                     containerColor = Black,
                                     disabledContainerColor = Grey300
-                                )
+                                ),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Remove,
@@ -114,33 +122,37 @@ fun BrowserMenu(
                                 )
                             }
 
+                            // Current Zoom
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable { onZoomReset() }
                             ) {
                                 Text(
                                     "$currentZoom%",
-                                    fontSize = 24.sp,
+                                    fontSize = 32.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (currentZoom != 100) Black else Grey600,
                                 )
                                 if (currentZoom != 100) {
                                     Text(
-                                        "Tap to reset",
-                                        fontSize = 11.sp,
+                                        "Reset",
+                                        fontSize = 12.sp,
                                         color = Grey500
                                     )
                                 }
                             }
 
-                            FilledIconButton(
+                            // Zoom In
+                            Button(
                                 onClick = onZoomIn,
                                 enabled = !zoomAtMax,
                                 modifier = Modifier.size(48.dp),
-                                colors = IconButtonDefaults.filledIconButtonColors(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
                                     containerColor = Black,
                                     disabledContainerColor = Grey300
-                                )
+                                ),
+                                contentPadding = PaddingValues(0.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
@@ -152,32 +164,33 @@ fun BrowserMenu(
                     }
                 }
 
+                // Desktop Mode Toggle
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = Grey50),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
+                            .padding(20.dp)
                             .clickable { onToggleDesktop() },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Column {
                             Text(
-                                "Desktop Site",
+                                "Desktop Mode",
                                 fontSize = 16.sp,
                                 color = Black,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
                                 if (activeTab?.isDesktopMode == true) 
-                                    "Desktop mode enabled" 
+                                    "Enabled" 
                                 else 
-                                    "Mobile mode enabled",
+                                    "Disabled",
                                 fontSize = 13.sp,
                                 color = Grey600,
                             )
@@ -196,14 +209,15 @@ fun BrowserMenu(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 
+                // Tips
                 Text(
-                    "Tip: Swipe left/right to navigate",
+                    "LitEBrowser - Fast & Lightweight",
                     fontSize = 12.sp,
-                    color = Grey500,
+                    color = Grey400,
                     modifier = Modifier.fillMaxWidth(),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
             }
         }
