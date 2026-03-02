@@ -22,6 +22,7 @@ val Blue600        = Color(0xFF1A73E8)
 val Blue700        = Color(0xFF1967D2)
 val Green600       = Color(0xFF188038)
 val Red500         = Color(0xFFEA4335)
+val Red100         = Color(0xFFFFE0E0)
 
 private val LightColors = lightColorScheme(
     primary          = Blue600,
