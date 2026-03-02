@@ -1,18 +1,25 @@
 package com.litebrowser.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -47,160 +54,171 @@ fun UrlBar(
         }
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .background(Grey50)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shadowElevation = 8.dp,
+        color = Grey50
     ) {
-        // Back Button
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clickable(enabled = activeTab?.canGoBack == true) { onBack() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "←",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (activeTab?.canGoBack == true) Grey700 else Grey400,
-            )
-        }
-
-        // Forward Button
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clickable(enabled = activeTab?.canGoForward == true) { onForward() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "→",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (activeTab?.canGoForward == true) Grey700 else Grey400,
-            )
-        }
-
-        // URL Field
         Row(
             modifier = Modifier
-                .weight(1f)
-                .height(36.dp)
-                .background(White, RoundedCornerShape(18.dp))
-                .border(
-                    width = if (isFocused) 1.5.dp else 1.dp,
-                    color = if (isFocused) Blue600 else Grey300,
-                    shape = RoundedCornerShape(18.dp)
-                )
-                .padding(horizontal = 12.dp)
-                .clickable {
-                    inputText = activeTab?.url ?: ""
-                    isFocused = true
-                    focusRequester.requestFocus()
-                    keyboardController?.show()
-                },
+                .fillMaxWidth()
+                .height(64.dp)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Security Icon
-            val isSecure = activeTab?.url?.startsWith("https://") == true
-            Text(
-                text = if (isSecure) "🔒" else "⚠️",
-                fontSize = 12.sp,
-            )
+            // Back Button
+            IconButton(
+                onClick = onBack,
+                enabled = activeTab?.canGoBack == true,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Back",
+                    modifier = Modifier.size(24.dp),
+                    tint = if (activeTab?.canGoBack == true) Grey700 else Grey400
+                )
+            }
 
-            if (isFocused) {
-                BasicTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
+            // Forward Button
+            IconButton(
+                onClick = onForward,
+                enabled = activeTab?.canGoForward == true,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "Forward",
+                    modifier = Modifier.size(24.dp),
+                    tint = if (activeTab?.canGoForward == true) Grey700 else Grey400
+                )
+            }
+
+            // URL Field - Modern Design
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = White,
+                shadowElevation = 2.dp
+            ) {
+                Row(
                     modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(focusRequester)
-                        .onFocusChanged {
-                            isFocused = it.isFocused
-                            if (!it.isFocused) {
-                                keyboardController?.hide()
-                            }
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp)
+                        .clickable {
+                            inputText = activeTab?.url ?: ""
+                            isFocused = true
+                            focusRequester.requestFocus()
+                            keyboardController?.show()
                         },
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 13.sp,
-                        color = Grey900,
-                    ),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                    keyboardActions = KeyboardActions(
-                        onGo = {
-                            if (inputText.isNotBlank()) {
-                                onNavigate(inputText)
-                                isFocused = false
-                                keyboardController?.hide()
-                            }
-                        }
-                    ),
-                )
-            } else {
-                val displayText = when {
-                    activeTab?.url.isNullOrEmpty() -> "Search or enter address"
-                    activeTab.url.startsWith("about:") -> "Home"
-                    activeTab.url.startsWith("https://lite.duckduckgo.com") -> "DuckDuckGo Lite Search"
-                    else -> activeTab.url.replace("https://", "").replace("http://", "").substringBefore("/")
-                }
-                
-                Text(
-                    text = displayText,
-                    fontSize = 13.sp,
-                    color = if (activeTab?.url.isNullOrEmpty() || activeTab?.url?.startsWith("about:") == true) Grey500 else Grey800,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            // Desktop Mode Badge
-            if (activeTab?.isDesktopMode == true) {
-                Box(
-                    modifier = Modifier
-                        .background(Blue50, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        "DESKTOP",
-                        fontSize = 9.sp,
-                        color = Blue600,
-                        fontWeight = FontWeight.SemiBold,
+                    // Search/Security Icon
+                    Icon(
+                        imageVector = if (activeTab?.url?.startsWith("https://") == true) 
+                            Icons.Default.Search else Icons.Default.Search,
+                        contentDescription = "Search",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (activeTab?.url?.startsWith("https://") == true) 
+                            Green600 else Grey500
                     )
+
+                    if (isFocused) {
+                        BasicTextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .onFocusChanged {
+                                    isFocused = it.isFocused
+                                    if (!it.isFocused) {
+                                        keyboardController?.hide()
+                                    }
+                                },
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 15.sp,
+                                color = Grey900,
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                            keyboardActions = KeyboardActions(
+                                onGo = {
+                                    if (inputText.isNotBlank()) {
+                                        onNavigate(inputText)
+                                        isFocused = false
+                                        keyboardController?.hide()
+                                    }
+                                }
+                            ),
+                        )
+                    } else {
+                        val displayText = when {
+                            activeTab?.url.isNullOrEmpty() -> "Search or enter address"
+                            activeTab.url.startsWith("about:") -> "Home"
+                            activeTab.url.startsWith("https://lite.duckduckgo.com") -> "Search DuckDuckGo"
+                            else -> activeTab.url.replace("https://", "").replace("http://", "").take(30)
+                        }
+
+                        Text(
+                            text = displayText,
+                            fontSize = 15.sp,
+                            color = if (activeTab?.url.isNullOrEmpty() || activeTab?.url?.startsWith("about:") == true) 
+                                Grey500 else Grey800,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+
+                    // Desktop badge
+                    if (activeTab?.isDesktopMode == true) {
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Blue100)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "Desktop",
+                                fontSize = 10.sp,
+                                color = Blue700,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
-        }
 
-        // Refresh Button
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clickable { onRefresh() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("↻", fontSize = 18.sp, color = Grey600)
-        }
+            // Refresh Button
+            IconButton(
+                onClick = onRefresh,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Refresh",
+                    modifier = Modifier.size(24.dp),
+                    tint = Grey600
+                )
+            }
 
-        // Menu Button
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clickable { onMenuOpen() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                "⋮",
-                fontSize = 20.sp,
-                color = Grey600,
-                fontWeight = FontWeight.Bold
-            )
+            // Menu Button
+            IconButton(
+                onClick = onMenuOpen,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Menu",
+                    modifier = Modifier.size(24.dp),
+                    tint = Grey600
+                )
+            }
         }
     }
 }

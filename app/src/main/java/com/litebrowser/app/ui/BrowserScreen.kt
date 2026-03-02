@@ -3,6 +3,7 @@ package com.litebrowser.app.ui
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,58 +26,62 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
         label = "progress",
     )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(White)
-            .systemBarsPadding()
-    ) {
-        TabStrip(
-            tabs = tabs,
-            activeTabId = activeTabId,
-            onTabClick = { viewModel.switchToTab(it) },
-            onTabClose = { viewModel.closeTab(it) },
-            onNewTab = { viewModel.openNewTab() },
-        )
+    Scaffold(
+        topBar = {
+            Column {
+                // Tab Strip at top
+                TabStrip(
+                    tabs = tabs,
+                    activeTabId = activeTabId,
+                    onTabClick = { viewModel.switchToTab(it) },
+                    onTabClose = { viewModel.closeTab(it) },
+                    onNewTab = { viewModel.openNewTab() },
+                )
+                
+                // Progress bar
+                if (activeTab?.isLoading == true) {
+                    LinearProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp),
+                        color = Blue600,
+                        trackColor = Grey200,
+                    )
+                }
+            }
+        },
+        bottomBar = {
+            // URL Bar at bottom (thumb-friendly)
+            Box {
+                UrlBar(
+                    activeTab = activeTab,
+                    onNavigate = { viewModel.navigate(it) },
+                    onBack = { viewModel.goBack() },
+                    onForward = { viewModel.goForward() },
+                    onRefresh = { viewModel.refresh() },
+                    onMenuOpen = { menuOpen = true },
+                )
 
-        Box {
-            UrlBar(
-                activeTab = activeTab,
-                onNavigate = { viewModel.navigate(it) },
-                onBack = { viewModel.goBack() },
-                onForward = { viewModel.goForward() },
-                onRefresh = { viewModel.refresh() },
-                onMenuOpen = { menuOpen = true },
-            )
-
-            BrowserMenu(
-                expanded = menuOpen,
-                activeTab = activeTab,
-                onDismiss = { menuOpen = false },
-                onZoomIn = { viewModel.zoomIn() },
-                onZoomOut = { viewModel.zoomOut() },
-                onZoomReset = { viewModel.zoomReset() },
-                onToggleDesktop = { viewModel.toggleDesktopMode(); menuOpen = false },
-            )
-        }
-
-        if (activeTab?.isLoading == true) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(Grey200)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress)
-                        .fillMaxHeight()
-                        .background(Blue600)
+                BrowserMenu(
+                    expanded = menuOpen,
+                    activeTab = activeTab,
+                    onDismiss = { menuOpen = false },
+                    onZoomIn = { viewModel.zoomIn() },
+                    onZoomOut = { viewModel.zoomOut() },
+                    onZoomReset = { viewModel.zoomReset() },
+                    onToggleDesktop = { viewModel.toggleDesktopMode(); menuOpen = false },
                 )
             }
         }
-
-        Box(modifier = Modifier.fillMaxSize()) {
+    ) { paddingValues ->
+        // Content area
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(White)
+        ) {
             activeTab?.let { tab ->
                 if (tab.webView != null) {
                     key("${tab.id}_${tab.isDesktopMode}") {
