@@ -2,6 +2,8 @@ package com.litebrowser.app.manager
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -11,10 +13,13 @@ import com.litebrowser.app.model.BrowserTab
 
 class TabManager(private val context: Context) {
 
+    private val handler = Handler(Looper.getMainLooper())
+
     var onPageStarted:     (tabId: String, url: String) -> Unit                          = { _, _ -> }
     var onPageFinished:    (tabId: String, url: String, title: String) -> Unit           = { _, _, _ -> }
     var onProgressChanged: (tabId: String, progress: Int) -> Unit                        = { _, _ -> }
     var onHistoryChanged:  (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit    = { _, _, _ -> }
+    var getTabZoomLevel:   (tabId: String) -> Int = { 100 }
 
     fun createWebView(tab: BrowserTab): WebView {
         val wv = WebView(context)
@@ -44,7 +49,12 @@ class TabManager(private val context: Context) {
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                applyZoom(view, tab.zoomLevel)
+                val zoomLevel = getTabZoomLevel(tab.id)
+                applyZoom(view, zoomLevel)
+                
+                handler.postDelayed({
+                    applyZoom(view, zoomLevel)
+                }, 100)
 
                 onPageFinished(tab.id, url, view.title ?: url)
                 onHistoryChanged(tab.id, view.canGoBack(), view.canGoForward())

@@ -31,6 +31,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     init {
         openNewTab()
 
+        tabManager.getTabZoomLevel = { tabId ->
+            _tabs.value.find { it.id == tabId }?.zoomLevel ?: 100
+        }
+
         tabManager.onPageStarted = { tabId, url ->
             updateTab(tabId) { it.copy(isLoading = true, url = url) }
         }
@@ -119,7 +123,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun refresh() {
-        activeTab?.webView?.reload()
+        val tab = activeTab ?: return
+        tab.webView?.let { wv ->
+            tabManager.applyZoom(wv, tab.zoomLevel)
+            wv.reload()
+        }
     }
 
     fun zoomIn() {
@@ -145,10 +153,21 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun toggleDesktopMode() {
         val tab = activeTab ?: return
         val newMode = !tab.isDesktopMode
-        updateTab(tab.id) { it.copy(isDesktopMode = newMode) }
-        tab.webView?.let { wv ->
-            tabManager.applyUserAgent(wv, newMode, reload = true)
-        }
+        val currentUrl = tab.url.ifEmpty { HOMEPAGE }
+        
+        tab.webView?.destroy()
+        
+        val newTab = tab.copy(
+            isDesktopMode = newMode,
+            webView = null,
+            savedState = null
+        )
+        
+        updateTab(tab.id) { newTab }
+        
+        val wv = tabManager.createWebView(newTab)
+        newTab.webView = wv
+        wv.loadUrl(currentUrl)
     }
 
     fun onLowMemory() {
