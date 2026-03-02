@@ -1,21 +1,17 @@
 package com.litebrowser.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,7 +37,7 @@ fun BrowserMenu(
         ModalBottomSheet(
             onDismissRequest = onDismiss,
             sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
             containerColor = White,
             tonalElevation = 8.dp
         ) {
@@ -51,7 +47,6 @@ fun BrowserMenu(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 32.dp)
             ) {
-                // Handle indicator
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -71,16 +66,15 @@ fun BrowserMenu(
                     "Menu",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Grey900,
+                    color = Black,
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
                 
-                // Zoom Control Section
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Grey50),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
@@ -104,24 +98,22 @@ fun BrowserMenu(
                             val zoomAtMax = (activeTab?.zoomLevel ?: 100) >= 300
                             val currentZoom = activeTab?.zoomLevel ?: 100
 
-                            // Zoom Out
                             FilledIconButton(
                                 onClick = onZoomOut,
                                 enabled = !zoomAtMin,
                                 modifier = Modifier.size(48.dp),
                                 colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = Grey200,
-                                    disabledContainerColor = Grey100
+                                    containerColor = Black,
+                                    disabledContainerColor = Grey300
                                 )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Remove,
                                     contentDescription = "Zoom out",
-                                    tint = if (zoomAtMin) Grey400 else Grey800
+                                    tint = White
                                 )
                             }
 
-                            // Current Zoom
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.clickable { onZoomReset() }
@@ -130,41 +122,39 @@ fun BrowserMenu(
                                     "$currentZoom%",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (currentZoom != 100) Blue600 else Grey900,
+                                    color = if (currentZoom != 100) Black else Grey600,
                                 )
                                 if (currentZoom != 100) {
                                     Text(
                                         "Tap to reset",
                                         fontSize = 11.sp,
-                                        color = Blue600
+                                        color = Grey500
                                     )
                                 }
                             }
 
-                            // Zoom In
                             FilledIconButton(
                                 onClick = onZoomIn,
                                 enabled = !zoomAtMax,
                                 modifier = Modifier.size(48.dp),
                                 colors = IconButtonDefaults.filledIconButtonColors(
-                                    containerColor = Grey200,
-                                    disabledContainerColor = Grey100
+                                    containerColor = Black,
+                                    disabledContainerColor = Grey300
                                 )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = "Zoom in",
-                                    tint = if (zoomAtMax) Grey400 else Grey800
+                                    tint = White
                                 )
                             }
                         }
                     }
                 }
 
-                // Desktop Mode Toggle
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = Grey50),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
@@ -180,14 +170,14 @@ fun BrowserMenu(
                             Text(
                                 "Desktop Site",
                                 fontSize = 16.sp,
-                                color = Grey900,
+                                color = Black,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
                                 if (activeTab?.isDesktopMode == true) 
-                                    "Viewing desktop version" 
+                                    "Desktop mode enabled" 
                                 else 
-                                    "Viewing mobile version",
+                                    "Mobile mode enabled",
                                 fontSize = 13.sp,
                                 color = Grey600,
                             )
@@ -198,9 +188,9 @@ fun BrowserMenu(
                             onCheckedChange = { onToggleDesktop() },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = White,
-                                checkedTrackColor = Blue600,
+                                checkedTrackColor = Black,
                                 uncheckedThumbColor = White,
-                                uncheckedTrackColor = Grey300
+                                uncheckedTrackColor = Grey400
                             )
                         )
                     }
@@ -208,9 +198,8 @@ fun BrowserMenu(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Tips
                 Text(
-                    "💡 Tip: Swipe left/right on page to go back/forward",
+                    "Tip: Swipe left/right to navigate",
                     fontSize = 12.sp,
                     color = Grey500,
                     modifier = Modifier.fillMaxWidth(),

@@ -1,22 +1,8 @@
 package com.litebrowser.app.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -33,11 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -47,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.litebrowser.app.model.BrowserTab
 import com.litebrowser.app.ui.theme.*
 
-@OptIn(ExperimentalComposeUiApi::class, ExperimentalAnimationApi::class)
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun UrlBar(
     activeTab: BrowserTab?,
@@ -62,13 +46,6 @@ fun UrlBar(
     var isFocused by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    
-    // Progress animation
-    val progress by animateFloatAsState(
-        targetValue = (activeTab?.progress ?: 0) / 100f,
-        animationSpec = tween(300),
-        label = "progress"
-    )
 
     LaunchedEffect(activeTab?.url, activeTab?.id) {
         if (!isFocused && activeTab != null) {
@@ -82,14 +59,13 @@ fun UrlBar(
         color = Grey50
     ) {
         Column {
-            // Loading progress bar
             if (activeTab?.isLoading == true) {
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = { (activeTab.progress) / 100f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(2.dp),
-                    color = Blue600,
+                    color = Black,
                     trackColor = Grey200,
                 )
             }
@@ -97,48 +73,37 @@ fun UrlBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .height(56.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // Back Button with animation
-                val backScale by animateFloatAsState(
-                    targetValue = if (activeTab?.canGoBack == true) 1f else 0.9f,
-                    label = "backScale"
-                )
                 IconButton(
                     onClick = onBack,
                     enabled = activeTab?.canGoBack == true,
-                    modifier = Modifier.size(44.dp).scale(backScale)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         modifier = Modifier.size(24.dp),
-                        tint = if (activeTab?.canGoBack == true) Grey700 else Grey400
+                        tint = if (activeTab?.canGoBack == true) Black else Grey400
                     )
                 }
 
-                // Forward Button with animation
-                val forwardScale by animateFloatAsState(
-                    targetValue = if (activeTab?.canGoForward == true) 1f else 0.9f,
-                    label = "forwardScale"
-                )
                 IconButton(
                     onClick = onForward,
                     enabled = activeTab?.canGoForward == true,
-                    modifier = Modifier.size(44.dp).scale(forwardScale)
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Forward",
                         modifier = Modifier.size(24.dp),
-                        tint = if (activeTab?.canGoForward == true) Grey700 else Grey400
+                        tint = if (activeTab?.canGoForward == true) Black else Grey400
                     )
                 }
 
-                // URL Field - Smart Design
                 Surface(
                     modifier = Modifier
                         .weight(1f)
@@ -146,12 +111,15 @@ fun UrlBar(
                     shape = RoundedCornerShape(22.dp),
                     color = White,
                     shadowElevation = if (isFocused) 4.dp else 2.dp,
-                    tonalElevation = if (isFocused) 2.dp else 0.dp
+                    border = androidx.compose.foundation.BorderStroke(
+                        if (isFocused) 2.dp else 1.dp,
+                        if (isFocused) Black else Grey300
+                    )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 14.dp)
+                            .padding(horizontal = 16.dp)
                             .clickable {
                                 inputText = activeTab?.url ?: ""
                                 isFocused = true
@@ -159,28 +127,14 @@ fun UrlBar(
                                 keyboardController?.show()
                             },
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        // Smart Icon
-                        val isSecure = activeTab?.url?.startsWith("https://") == true
-                        val iconTint = when {
-                            isSecure -> Green600
-                            activeTab?.url?.startsWith("http://") == true -> Red500
-                            else -> Grey500
-                        }
-                        
-                        AnimatedContent(
-                            targetState = isSecure,
-                            transitionSpec = { fadeIn() with fadeOut() },
-                            label = "securityIcon"
-                        ) { secure ->
-                            Icon(
-                                imageVector = if (secure) Icons.Default.Search else Icons.Default.Search,
-                                contentDescription = if (secure) "Secure" else "Search",
-                                modifier = Modifier.size(20.dp),
-                                tint = iconTint
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            modifier = Modifier.size(20.dp),
+                            tint = Grey500
+                        )
 
                         if (isFocused) {
                             BasicTextField(
@@ -198,7 +152,7 @@ fun UrlBar(
                                 singleLine = true,
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     fontSize = 15.sp,
-                                    color = Grey900,
+                                    color = Black,
                                 ),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                                 keyboardActions = KeyboardActions(
@@ -214,8 +168,8 @@ fun UrlBar(
                         } else {
                             val displayText = when {
                                 activeTab?.url.isNullOrEmpty() -> "Search or enter address"
-                                activeTab.url.startsWith("about:") -> "🏠 Home"
-                                activeTab.url.startsWith("https://lite.duckduckgo.com") -> "🔍 DuckDuckGo"
+                                activeTab.url.startsWith("about:") -> "Home"
+                                activeTab.url.startsWith("https://lite.duckduckgo.com") -> "Search"
                                 else -> activeTab.url
                                     .replace("https://", "")
                                     .replace("http://", "")
@@ -226,41 +180,32 @@ fun UrlBar(
                             Text(
                                 text = displayText,
                                 fontSize = 15.sp,
-                                color = when {
-                                    activeTab?.url.isNullOrEmpty() -> Grey500
-                                    activeTab?.url?.startsWith("about:") == true -> Blue600
-                                    else -> Grey800
-                                },
+                                color = if (activeTab?.url.isNullOrEmpty()) Grey500 else Black,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
                         }
 
-                        // Desktop badge
-                        AnimatedVisibility(
-                            visible = activeTab?.isDesktopMode == true,
-                            enter = scaleIn() + fadeIn(),
-                            exit = scaleOut() + fadeOut()
-                        ) {
-                            Box(
+                        if (activeTab?.isDesktopMode == true) {
+                            Surface(
                                 modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(Blue100)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = Grey200,
+                                shape = RoundedCornerShape(4.dp)
                             ) {
                                 Text(
                                     "Desktop",
                                     fontSize = 10.sp,
-                                    color = Blue700,
-                                    fontWeight = FontWeight.SemiBold
+                                    color = Black,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                // Refresh Button with rotation animation
                 IconButton(
                     onClick = onRefresh,
                     modifier = Modifier.size(44.dp)
@@ -269,11 +214,10 @@ fun UrlBar(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Refresh",
                         modifier = Modifier.size(24.dp),
-                        tint = Grey600
+                        tint = Black
                     )
                 }
 
-                // Menu Button
                 IconButton(
                     onClick = onMenuOpen,
                     modifier = Modifier.size(44.dp)
@@ -282,7 +226,7 @@ fun UrlBar(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Menu",
                         modifier = Modifier.size(24.dp),
-                        tint = Grey600
+                        tint = Black
                     )
                 }
             }

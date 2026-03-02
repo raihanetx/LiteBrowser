@@ -5,33 +5,27 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// Pure Black & White Theme
 val White          = Color(0xFFFFFFFF)
-val Grey50         = Color(0xFFF8F9FA)
-val Grey100        = Color(0xFFF1F3F4)
-val Grey200        = Color(0xFFE8EAED)
-val Grey300        = Color(0xFFDADCE0)
-val Grey400        = Color(0xFFBDC1C6)
-val Grey500        = Color(0xFF9AA0A6)
-val Grey600        = Color(0xFF80868B)
-val Grey700        = Color(0xFF5F6368)
-val Grey800        = Color(0xFF3C4043)
-val Grey900        = Color(0xFF202124)
-val Blue50         = Color(0xFFE8F0FE)
-val Blue100        = Color(0xFFD2E3FC)
-val Blue600        = Color(0xFF1A73E8)
-val Blue700        = Color(0xFF1967D2)
-val Green600       = Color(0xFF188038)
-val Red500         = Color(0xFFEA4335)
-val Red100         = Color(0xFFFFE0E0)
+val Grey50         = Color(0xFFF5F5F5)
+val Grey100        = Color(0xFFE0E0E0)
+val Grey200        = Color(0xFFBDBDBD)
+val Grey300        = Color(0xFF9E9E9E)
+val Grey400        = Color(0xFF757575)
+val Grey500        = Color(0xFF616161)
+val Grey600        = Color(0xFF424242)
+val Grey700        = Color(0xFF303030)
+val Grey800        = Color(0xFF212121)
+val Black          = Color(0xFF000000)
 
 private val LightColors = lightColorScheme(
-    primary          = Blue600,
+    primary          = Black,
     background       = White,
     surface          = White,
     onPrimary        = White,
-    onBackground     = Grey900,
-    onSurface        = Grey900,
-    outline          = Grey200,
+    onBackground     = Black,
+    onSurface        = Black,
+    outline          = Grey300,
 )
 
 @Composable
