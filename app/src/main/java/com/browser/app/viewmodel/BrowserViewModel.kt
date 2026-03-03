@@ -31,7 +31,7 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
     companion object {
         private const val DUCKDUCKGO_LITE = "https://duckduckgo.com/lite"
         private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        private const val ZOOM_STEP = 10 // 10% increments
+        private const val ZOOM_STEP = 20 // 20% increments for better feel
         private const val MIN_ZOOM = 50  // 50% minimum
         private const val MAX_ZOOM = 300 // 300% maximum
     }
@@ -251,8 +251,48 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         val zoomLevel = zoomPercent / 100.0
         val script = """
             (function() {
-                document.body.style.zoom = '$zoomLevel';
-                document.body.style.transformOrigin = 'top left';
+                // Store current scroll position relative to zoom
+                var scrollX = window.scrollX;
+                var scrollY = window.scrollY;
+                var docWidth = document.documentElement.scrollWidth;
+                var docHeight = document.documentElement.scrollHeight;
+                
+                // Calculate center point before zoom
+                var centerX = scrollX + window.innerWidth / 2;
+                var centerY = scrollY + window.innerHeight / 2;
+                
+                // Apply zoom with smooth transition
+                var style = document.getElementById('zoom-style');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'zoom-style';
+                    document.head.appendChild(style);
+                }
+                
+                // CSS for zoom with smooth transition
+                style.textContent = `
+                    html {
+                        transition: transform 0.2s ease-out !important;
+                        transform-origin: center top !important;
+                        transform: scale(${zoomLevel}) !important;
+                    }
+                    body {
+                        width: ${100.0 / zoomLevel}% !important;
+                        min-width: ${100.0 / zoomLevel}% !important;
+                    }
+                `;
+                
+                // Restore scroll position centered on same point
+                setTimeout(function() {
+                    var newDocWidth = document.documentElement.scrollWidth;
+                    var newDocHeight = document.documentElement.scrollHeight;
+                    var scaleRatio = newDocWidth / docWidth;
+                    
+                    window.scrollTo(
+                        centerX * scaleRatio - window.innerWidth / 2,
+                        centerY * scaleRatio - window.innerHeight / 2
+                    );
+                }, 210);
             })();
         """.trimIndent()
         webView.evaluateJavascript(script, null)

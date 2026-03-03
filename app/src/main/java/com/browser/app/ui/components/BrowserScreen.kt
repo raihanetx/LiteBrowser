@@ -124,13 +124,16 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Zoom level indicator - shows current page zoom percentage
+                    // Zoom level indicator - always visible, click to reset
                     val zoomLevel = viewModel.getCurrentZoomLevel()
-                    if (zoomLevel != 100) {
+                    TextButton(
+                        onClick = { viewModel.resetZoom() },
+                        modifier = Modifier.align(Alignment.CenterHorizontally).height(24.dp),
+                        enabled = zoomLevel != 100
+                    ) {
                         Text(
-                            text = "$zoomLevel%",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
+                            text = if (zoomLevel != 100) "$zoomLevel% (Reset)" else "100%",
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                     Row(
