@@ -14,12 +14,17 @@ import androidx.lifecycle.ViewModel
 import com.browser.app.model.Tab
 
 class BrowserViewModel : ViewModel() {
-    
+
     val tabs = mutableStateListOf<Tab>()
     val currentTabIndex = mutableStateOf(-1)
     val showTabsOverview = mutableStateOf(false)
     val urlInput = mutableStateOf("")
-    
+
+    companion object {
+        private const val DUCKDUCKGO_LITE = "https://duckduckgo.com/lite"
+        private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
     init {
         addNewTab()
     }
@@ -75,11 +80,13 @@ class BrowserViewModel : ViewModel() {
                 loadWithOverviewMode = true
                 useWideViewPort = true
                 setSupportZoom(true)
-                
+                setSupportMultipleWindows(true)
+                javaScriptCanOpenWindowsAutomatically = true
+                mediaPlaybackRequiresUserGesture = false
+
                 // Desktop mode user agent
                 if (tab.desktopMode) {
-                    userAgentString = userAgentString.replace("Android", "diordnA")
-                        .replace("Mobile", "eliboM")
+                    userAgentString = DESKTOP_USER_AGENT
                 }
             }
             
@@ -128,13 +135,13 @@ class BrowserViewModel : ViewModel() {
         }
         
         tab.webView = webView
-        
+
         if (tab.url.isNotEmpty()) {
             webView.loadUrl(tab.url)
         } else {
-            webView.loadUrl("https://www.google.com")
+            webView.loadUrl(DUCKDUCKGO_LITE)
         }
-        
+
         return webView
     }
     
@@ -162,27 +169,35 @@ class BrowserViewModel : ViewModel() {
     }
     
     fun zoomIn() {
-        getCurrentTab()?.webView?.zoomIn()
+        val webView = getCurrentTab()?.webView ?: return
+        val currentZoom = webView.settings.textZoom
+        webView.settings.textZoom = (currentZoom + 10).coerceAtMost(200)
     }
-    
+
     fun zoomOut() {
-        getCurrentTab()?.webView?.zoomOut()
+        val webView = getCurrentTab()?.webView ?: return
+        val currentZoom = webView.settings.textZoom
+        webView.settings.textZoom = (currentZoom - 10).coerceAtLeast(50)
     }
     
     fun toggleDesktopMode() {
         val currentTab = getCurrentTab() ?: return
         currentTab.desktopMode = !currentTab.desktopMode
-        
-        currentTab.webView?.settings?.apply {
+
+        val webView = currentTab.webView ?: return
+        val context = webView.context
+
+        webView.settings.apply {
             userAgentString = if (currentTab.desktopMode) {
-                userAgentString.replace("Android", "diordnA")
-                    .replace("Mobile", "eliboM")
+                DESKTOP_USER_AGENT
             } else {
-                WebSettings.getDefaultUserAgent(currentTab.webView?.context ?: return)
+                WebSettings.getDefaultUserAgent(context)
             }
         }
-        
-        currentTab.webView?.reload()
+
+        // Clear cache to ensure the page reloads with new user agent
+        webView.clearCache(false)
+        webView.reload()
     }
     
     override fun onCleared() {

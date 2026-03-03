@@ -10,7 +10,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -141,15 +140,10 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            currentTab?.let { tab ->
-                key(tab.id) {
-                    WebViewContainer(
-                        tab = tab,
-                        viewModel = viewModel,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
+            WebViewManager(
+                viewModel = viewModel,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
     
