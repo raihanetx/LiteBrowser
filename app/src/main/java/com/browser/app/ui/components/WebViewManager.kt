@@ -7,7 +7,6 @@ import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -20,7 +19,6 @@ fun WebViewManager(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val currentTab = viewModel.getCurrentTab()
 
     // Create a container that holds all WebViews
     AndroidView(
@@ -33,6 +31,8 @@ fun WebViewManager(
             }
         },
         update = { container ->
+            val currentIndex = viewModel.currentTabIndex.value
+
             // Ensure all tab WebViews are created and attached
             viewModel.tabs.forEachIndexed { index, tab ->
                 val webView = tab.webView ?: viewModel.createWebView(context, tab).also {
@@ -48,12 +48,18 @@ fun WebViewManager(
                 }
 
                 // Show only current tab, hide others
-                val isCurrentTab = index == viewModel.currentTabIndex.value
+                val isCurrentTab = index == currentIndex
                 webView.visibility = if (isCurrentTab) View.VISIBLE else View.GONE
 
-                // Apply desktop mode scripts when tab becomes visible
-                if (isCurrentTab && tab.desktopMode) {
-                    viewModel.injectDesktopModeScripts(webView)
+                // Apply settings when tab becomes visible
+                if (isCurrentTab) {
+                    // Apply domain zoom
+                    viewModel.applyDomainZoomToCurrentTab()
+
+                    // Apply desktop mode if enabled
+                    if (tab.desktopMode) {
+                        viewModel.injectDesktopModeScripts(webView)
+                    }
                 }
             }
         },

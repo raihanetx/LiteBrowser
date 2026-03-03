@@ -62,12 +62,30 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
     }
 
     fun switchToTab(index: Int) {
-        if (index in tabs.indices) {
+        if (index in tabs.indices && index != currentTabIndex.value) {
+            // Save current tab state before switching
+            val currentTab = getCurrentTab()
+            currentTab?.webView?.let { webView ->
+                // WebView state is automatically saved in WebViewManager
+            }
+            
+            // Switch to new tab
             currentTabIndex.value = index
             showTabsOverview.value = false
             updateUrlInputFromCurrentTab()
-            // Apply domain-specific zoom when switching tabs
-            applyDomainZoomToCurrentTab()
+            
+            // Apply settings to new tab after a short delay to ensure WebView is ready
+            val newTab = tabs[index]
+            newTab.webView?.post {
+                // Apply domain-specific zoom
+                applyDomainZoomToCurrentTab()
+                // Apply text zoom
+                newTab.webView?.settings?.textZoom = settingsManager.getTextZoom()
+                // Apply desktop mode if enabled
+                if (newTab.desktopMode) {
+                    injectDesktopModeScripts(newTab.webView)
+                }
+            }
         }
     }
 
@@ -98,6 +116,10 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
                 setSupportMultipleWindows(true)
                 javaScriptCanOpenWindowsAutomatically = true
                 mediaPlaybackRequiresUserGesture = false
+
+                // Form data saving for signup/login forms
+                saveFormData = true
+                savePassword = false              // Disabled for security
 
                 // Apply saved text zoom
                 textZoom = settingsManager.getTextZoom()
@@ -313,7 +335,7 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         applyZoomToWebView(webView, savedZoom)
     }
 
-    private fun applyDomainZoomToCurrentTab() {
+    fun applyDomainZoomToCurrentTab() {
         val tab = getCurrentTab() ?: return
         val webView = tab.webView ?: return
         applyZoomForDomain(webView, tab.url)
