@@ -144,12 +144,6 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                         IconButton(onClick = { viewModel.zoomIn() }) {
                             Icon(Icons.Default.Add, "Zoom in")
                         }
-                        IconButton(
-                            onClick = { viewModel.resetZoom() },
-                            enabled = zoomLevel != 100
-                        ) {
-                            Icon(Icons.Default.ZoomOutMap, "Reset zoom")
-                        }
                         IconButton(onClick = { viewModel.toggleDesktopMode() }) {
                             Icon(
                                 if (currentTab?.desktopMode == true)

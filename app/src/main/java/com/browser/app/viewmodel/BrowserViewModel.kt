@@ -279,16 +279,34 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         applyZoomForDomain(webView, tab.url)
     }
 
-    // TEXT ZOOM METHODS - For Accessibility
+    // TEXT ZOOM METHODS - For Accessibility (using JavaScript for reliability)
     fun setTextZoom(percentage: Int) {
         val coercedZoom = percentage.coerceIn(80, 200)
         textZoomLevel.value = coercedZoom
         settingsManager.setTextZoom(coercedZoom)
 
-        // Apply to all tabs
+        // Apply to all tabs using JavaScript instead of native textZoom
         tabs.forEach { tab ->
-            tab.webView?.settings?.textZoom = coercedZoom
+            tab.webView?.let { webView ->
+                applyTextZoomToWebView(webView, coercedZoom)
+            }
         }
+    }
+
+    private fun applyTextZoomToWebView(webView: WebView, percentage: Int) {
+        val scale = percentage / 100.0
+        val script = """
+            (function() {
+                var style = document.getElementById('text-zoom-style');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'text-zoom-style';
+                    document.head.appendChild(style);
+                }
+                style.textContent = 'body { font-size: ${scale}em !important; }';
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script, null)
     }
 
     fun getTextZoom(): Int {
