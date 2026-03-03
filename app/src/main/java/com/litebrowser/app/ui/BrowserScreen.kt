@@ -1,7 +1,6 @@
 package com.litebrowser.app.ui
 
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -23,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,8 +54,17 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
         Shortcut("REDDIT", "https://reddit.com", Color(0xFFFF4500), Icons.Rounded.Forum)
     )
 
-    Scaffold(
-        topBar = {
+    // Single unified background
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .systemBarsPadding() // Fix cut-off by adding system bars padding
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Header - Clean & Consistent
             EvanlyHeader(
                 url = activeTab?.url ?: "",
                 tabCount = tabs.size,
@@ -71,68 +78,72 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                     isHomePage = false
                 }
             )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(Color.White)
-        ) {
-            if (isHomePage || activeTab?.url?.isEmpty() != false) {
-                EvanlyHomePage(shortcuts) { selectedUrl ->
-                    isHomePage = false
-                    viewModel.navigate(selectedUrl)
-                }
-            } else {
-                activeTab?.let { tab ->
-                    if (tab.webView != null) {
-                        AndroidView(
-                            factory = { tab.webView!! },
-                            modifier = Modifier.fillMaxSize()
-                        )
+
+            // Divider for visual separation
+            HorizontalDivider(thickness = 1.dp, color = Zinc100)
+
+            // Content Area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (isHomePage || activeTab?.url?.isEmpty() != false) {
+                    EvanlyHomePage(shortcuts) { selectedUrl ->
+                        isHomePage = false
+                        viewModel.navigate(selectedUrl)
+                    }
+                } else {
+                    activeTab?.let { tab ->
+                        if (tab.webView != null) {
+                            AndroidView(
+                                factory = { tab.webView!! },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
+        }
 
-            if (showSheet) {
-                ModalBottomSheet(
-                    onDismissRequest = { showSheet = false },
-                    sheetState = sheetState,
-                    containerColor = Color.White,
-                    dragHandle = { 
-                        Box(
-                            Modifier
-                                .padding(vertical = 22.dp)
-                                .width(40.dp)
-                                .height(4.dp)
-                                .background(Zinc200, RoundedCornerShape(50))
-                        ) 
-                    }
-                ) {
-                    UniversalSliderContent(
-                        tabs = tabs.map { com.litebrowser.app.model.BrowserTab(id = it.id.toLong(), title = it.title, url = it.url) },
-                        activeTabId = activeTab?.id?.toLong() ?: 0L,
-                        zoom = activeTab?.zoomLevel ?: 100,
-                        isDesktop = activeTab?.isDesktopMode ?: false,
-                        onZoomChange = { 
-                            if (it > (activeTab?.zoomLevel ?: 100)) viewModel.zoomIn()
-                            else viewModel.zoomOut()
-                        },
-                        onDesktopToggle = { viewModel.toggleDesktopMode() },
-                        onTabSelect = { id ->
-                            viewModel.switchToTab(id)
-                            showSheet = false
-                            isHomePage = false
-                        },
-                        onCloseTab = { id ->
-                            viewModel.closeTab(id)
-                        },
-                        onAddTab = {
-                            viewModel.openNewTab()
-                        }
-                    )
+        // Bottom Sheet Menu
+        if (showSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSheet = false },
+                sheetState = sheetState,
+                containerColor = Color.White,
+                dragHandle = { 
+                    Box(
+                        Modifier
+                            .padding(vertical = 16.dp)
+                            .width(48.dp)
+                            .height(4.dp)
+                            .background(Zinc200, RoundedCornerShape(50))
+                    ) 
                 }
+            ) {
+                UniversalSliderContent(
+                    tabs = tabs.map { com.litebrowser.app.model.BrowserTab(id = it.id.toLong(), title = it.title, url = it.url) },
+                    activeTabId = activeTab?.id?.toLong() ?: 0L,
+                    zoom = activeTab?.zoomLevel ?: 100,
+                    isDesktop = activeTab?.isDesktopMode ?: false,
+                    onZoomChange = { 
+                        if (it > (activeTab?.zoomLevel ?: 100)) viewModel.zoomIn()
+                        else viewModel.zoomOut()
+                    },
+                    onDesktopToggle = { viewModel.toggleDesktopMode() },
+                    onTabSelect = { id ->
+                        viewModel.switchToTab(id)
+                        showSheet = false
+                        isHomePage = false
+                    },
+                    onCloseTab = { id ->
+                        viewModel.closeTab(id)
+                    },
+                    onAddTab = {
+                        viewModel.openNewTab()
+                    }
+                )
             }
         }
     }
@@ -154,40 +165,44 @@ fun EvanlyHeader(
         inputText = url
     }
 
+    // Fixed height with proper padding - no cut-off
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .height(64.dp) // Slightly taller
             .background(Color.White)
-            .border(1.dp, Zinc100)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp), // Consistent padding
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        IconButton(onClick = onHomeClick) {
+        // Home icon
+        IconButton(
+            onClick = onHomeClick,
+            modifier = Modifier.size(40.dp)
+        ) {
             Icon(
                 Icons.Rounded.Home, 
-                contentDescription = null, 
+                contentDescription = "Home", 
                 tint = Zinc900, 
                 modifier = Modifier.size(24.dp)
             )
         }
 
-        // Round pill search bar
+        // Search bar - unified style
         Row(
             modifier = Modifier
                 .weight(1f)
-                .height(38.dp)
+                .height(40.dp)
                 .background(Zinc50, CircleShape)
                 .border(1.dp, Zinc200, CircleShape)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Rounded.VerifiedUser, 
+                Icons.Rounded.Search, 
                 contentDescription = null, 
-                tint = Color(0xFF4285F4), 
-                modifier = Modifier.size(18.dp)
+                tint = Zinc400, 
+                modifier = Modifier.size(20.dp)
             )
             BasicTextField(
                 value = inputText,
@@ -203,20 +218,19 @@ fun EvanlyHeader(
                 }),
                 textStyle = TextStyle(
                     color = Zinc900,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.sp
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
                 ),
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 12.dp),
                 decorationBox = { innerTextField ->
                     if (inputText.isEmpty()) {
                         Text(
-                            "SEARCH OR ENTER URL", 
+                            "Search or enter URL", 
                             color = Zinc400, 
-                            fontSize = 11.sp, 
-                            fontWeight = FontWeight.Bold
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.Medium
                         )
                     }
                     innerTextField()
@@ -224,31 +238,37 @@ fun EvanlyHeader(
             )
         }
 
+        // Menu with tab counter
         Box(contentAlignment = Alignment.Center) {
-            IconButton(onClick = onMoreClick) {
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(40.dp)
+            ) {
                 Icon(
                     Icons.Rounded.MoreVert, 
-                    contentDescription = null, 
+                    contentDescription = "Menu", 
                     tint = Zinc900, 
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
             // Tab counter badge
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-4).dp, y = 4.dp),
-                color = Zinc900,
-                shape = CircleShape,
-                border = BorderStroke(2.dp, Color.White)
-            ) {
-                Text(
-                    text = tabCount.toString(),
-                    color = Color.White,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Black,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                )
+            if (tabCount > 0) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-2).dp, y = 2.dp),
+                    color = Zinc900,
+                    shape = CircleShape,
+                    border = BorderStroke(2.dp, Color.White)
+                ) {
+                    Text(
+                        text = tabCount.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
     }
@@ -260,44 +280,57 @@ fun EvanlyHomePage(
     onShortcutClick: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White), // Consistent white background
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Branding
+        // Branding - unified style
         Row(
             verticalAlignment = Alignment.CenterVertically, 
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = "E",
-                fontSize = 42.sp,
-                fontWeight = FontWeight.Black,
-                color = Zinc900
-            )
+            // Logo circle
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Zinc900),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "E",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White
+                )
+            }
             Text(
                 text = "LitEBrowser",
-                fontSize = 30.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = (-1).sp,
                 color = Zinc900
             )
         }
+        
         Text(
-            text = "THE NEW STANDARD OF BROWSER",
-            fontSize = 9.sp,
+            text = "FAST • LIGHTWEIGHT • PRIVATE",
+            fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 2.sp,
             color = Zinc400,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(modifier = Modifier.height(48.dp))
 
-        // Shortcuts grid
+        // Shortcuts grid - unified 4-column grid
         LazyVerticalGrid(
             columns = GridCells.Fixed(4),
-            modifier = Modifier.width(320.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -308,48 +341,51 @@ fun EvanlyHomePage(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
                             .background(site.color),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             site.icon, 
-                            contentDescription = null, 
+                            contentDescription = site.name, 
                             tint = Color.White, 
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Text(
                         site.name, 
-                        fontSize = 8.sp, 
-                        fontWeight = FontWeight.Black, 
-                        color = Zinc400, 
+                        fontSize = 10.sp, 
+                        fontWeight = FontWeight.Bold, 
+                        color = Zinc600, 
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }
+            
+            // Add button
             item {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(60.dp)
                             .clip(CircleShape)
                             .background(Zinc50)
-                            .border(2.dp, Zinc100, CircleShape),
+                            .border(2.dp, Zinc200, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Rounded.Add, 
-                            contentDescription = null, 
-                            tint = Zinc200
+                            contentDescription = "Add", 
+                            tint = Zinc400,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Text(
                         "ADD", 
-                        fontSize = 8.sp, 
-                        fontWeight = FontWeight.Black, 
-                        color = Zinc200, 
+                        fontSize = 10.sp, 
+                        fontWeight = FontWeight.Bold, 
+                        color = Zinc400, 
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
@@ -373,34 +409,37 @@ fun UniversalSliderContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp, top = 8.dp)
     ) {
+        // Title row
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "SESSION MANAGER", 
-                fontSize = 10.sp, 
+                "SESSIONS", 
+                fontSize = 12.sp, 
                 fontWeight = FontWeight.Black, 
-                letterSpacing = 2.sp, 
+                letterSpacing = 1.sp, 
                 color = Zinc400
             )
             TextButton(onClick = onAddTab) {
                 Text(
-                    "+ NEW TAB", 
-                    fontSize = 10.sp, 
+                    "+ NEW", 
+                    fontSize = 12.sp, 
                     fontWeight = FontWeight.Black, 
                     color = Zinc900
                 )
             }
         }
 
+        // Tab list
         LazyColumn(
             modifier = Modifier
-                .heightIn(max = 240.dp)
-                .padding(vertical = 12.dp),
+                .heightIn(max = 200.dp)
+                .padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(tabs) { tab ->
@@ -408,94 +447,107 @@ fun UniversalSliderContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(if (isActive) Zinc900 else Zinc50)
                         .border(
                             1.dp, 
-                            if (isActive) Zinc900 else Zinc100, 
-                            RoundedCornerShape(16.dp)
+                            if (isActive) Zinc900 else Zinc200, 
+                            RoundedCornerShape(12.dp)
                         )
                         .clickable { onTabSelect(tab.id) }
-                        .padding(16.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
                             tab.title, 
                             color = if (isActive) Color.White else Zinc900, 
-                            fontSize = 13.sp, 
-                            fontWeight = FontWeight.Bold
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            if(tab.url.isEmpty()) "DEFAULT_VIEW" else tab.url.uppercase(), 
-                            color = if (isActive) Color.White.copy(0.5f) else Zinc400, 
-                            fontSize = 9.sp, 
-                            fontWeight = FontWeight.Medium
+                            if(tab.url.isEmpty()) "Home" else tab.url, 
+                            color = if (isActive) Color.White.copy(0.6f) else Zinc500, 
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
                     IconButton(
                         onClick = { onCloseTab(tab.id) }, 
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             Icons.Rounded.Close, 
-                            contentDescription = null, 
-                            tint = if (isActive) Color.White.copy(0.5f) else Zinc200
+                            contentDescription = "Close", 
+                            tint = if (isActive) Color.White.copy(0.6f) else Zinc400,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
         }
 
-        Divider(color = Zinc50, modifier = Modifier.padding(vertical = 12.dp))
+        HorizontalDivider(thickness = 1.dp, color = Zinc100)
 
         // Zoom controls
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "PAGE ZOOM", 
-                fontSize = 11.sp, 
+                "ZOOM", 
+                fontSize = 12.sp, 
                 fontWeight = FontWeight.Black, 
                 color = Zinc900
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                IconButton(onClick = { onZoomChange((zoom - 10).coerceAtLeast(50)) }) {
+                IconButton(
+                    onClick = { onZoomChange((zoom - 25).coerceAtLeast(50)) },
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(
-                        Icons.Rounded.RemoveCircleOutline, 
-                        contentDescription = null, 
-                        tint = Zinc200
+                        Icons.Rounded.Remove, 
+                        contentDescription = "Zoom out", 
+                        tint = Zinc600,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 Text(
                     "$zoom%", 
-                    fontSize = 12.sp, 
-                    fontWeight = FontWeight.Black, 
-                    modifier = Modifier.width(40.dp), 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold, 
+                    color = Zinc900,
+                    modifier = Modifier.width(50.dp),
                     textAlign = TextAlign.Center
                 )
-                IconButton(onClick = { onZoomChange((zoom + 10).coerceAtMost(200)) }) {
+                IconButton(
+                    onClick = { onZoomChange((zoom + 25).coerceAtMost(200)) },
+                    modifier = Modifier.size(36.dp)
+                ) {
                     Icon(
-                        Icons.Rounded.AddCircleOutline, 
-                        contentDescription = null, 
-                        tint = Zinc200
+                        Icons.Rounded.Add, 
+                        contentDescription = "Zoom in", 
+                        tint = Zinc600,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
         }
 
+        HorizontalDivider(thickness = 1.dp, color = Zinc100)
+
         // Desktop toggle
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -503,10 +555,15 @@ fun UniversalSliderContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Rounded.Monitor, contentDescription = null, tint = Zinc900)
+                Icon(
+                    Icons.Rounded.DesktopWindows, 
+                    contentDescription = null, 
+                    tint = Zinc900,
+                    modifier = Modifier.size(20.dp)
+                )
                 Text(
-                    "DESKTOP ENVIRONMENT", 
-                    fontSize = 11.sp, 
+                    "DESKTOP MODE", 
+                    fontSize = 12.sp, 
                     fontWeight = FontWeight.Black, 
                     color = Zinc900
                 )
@@ -516,7 +573,9 @@ fun UniversalSliderContent(
                 onCheckedChange = onDesktopToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White, 
-                    checkedTrackColor = Zinc900
+                    checkedTrackColor = Zinc900,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Zinc300
                 )
             )
         }
