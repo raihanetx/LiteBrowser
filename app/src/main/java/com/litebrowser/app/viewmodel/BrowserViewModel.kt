@@ -2,7 +2,6 @@ package com.litebrowser.app.viewmodel
 
 import android.app.Application
 import android.os.Bundle
-import android.webkit.WebSettings
 import androidx.lifecycle.AndroidViewModel
 import com.litebrowser.app.manager.HomepageManager
 import com.litebrowser.app.manager.TabManager
@@ -10,7 +9,6 @@ import com.litebrowser.app.model.BrowserTab
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.UUID
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -19,16 +17,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val _tabs = MutableStateFlow<List<BrowserTab>>(emptyList())
     val tabs: StateFlow<List<BrowserTab>> = _tabs.asStateFlow()
 
-    private val _activeTabId = MutableStateFlow<String?>(null)
-    val activeTabId: StateFlow<String?> = _activeTabId.asStateFlow()
+    private val _activeTabId = MutableStateFlow<Long?>(null)
+    val activeTabId: StateFlow<Long?> = _activeTabId.asStateFlow()
 
     val activeTab: BrowserTab?
         get() = _tabs.value.find { it.id == _activeTabId.value }
 
     private val HOMEPAGE = "about:blank"
-    private val ZOOM_MIN = 50
-    private val ZOOM_MAX = 300
-    private val ZOOM_STEP = 25
+    private var nextTabId = 0L
 
     init {
         openNewTab()
@@ -59,7 +55,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun createTab(): BrowserTab {
-        val tab = BrowserTab(id = UUID.randomUUID().toString())
+        val tab = BrowserTab(id = nextTabId++)
         val wv = tabManager.createWebView(tab)
         tab.webView = wv
         return tab
@@ -80,7 +76,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
-    fun switchToTab(tabId: String) {
+    fun switchToTab(tabId: Long) {
         if (tabId == _activeTabId.value) return
 
         val targetTab = _tabs.value.find { it.id == tabId } ?: return
@@ -106,16 +102,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
             targetTab.webView = wv
             targetTab.savedState = null
-            
-            tabManager.applyZoomImmediate(wv, targetTab.zoomLevel)
-        } else {
-            tabManager.applyZoomImmediate(targetTab.webView!!, targetTab.zoomLevel)
         }
 
         _activeTabId.value = tabId
     }
 
-    fun closeTab(tabId: String) {
+    fun closeTab(tabId: Long) {
         val tabIndex = _tabs.value.indexOfFirst { it.id == tabId }
         if (tabIndex < 0) return
 
@@ -131,11 +123,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 openNewTab()
             } else {
                 val nextIndex = (tabIndex - 1).coerceAtLeast(0)
-                val nextTab = remaining[nextIndex]
-                if (nextTab.webView != null) {
-                    tabManager.applyZoomImmediate(nextTab.webView!!, nextTab.zoomLevel)
-                }
-                _activeTabId.value = nextTab.id
+                _activeTabId.value = remaining[nextIndex].id
             }
         }
     }
@@ -154,59 +142,21 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun refresh() {
-        val tab = activeTab ?: return
-        val wv = tab.webView ?: return
-        
-        tabManager.applyZoomImmediate(wv, tab.zoomLevel)
-        
-        handler.postDelayed({
-            tabManager.applyZoomImmediate(wv, tab.zoomLevel)
-        }, 100)
-        
-        wv.reload()
+        activeTab?.webView?.reload()
     }
-
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     fun zoomIn() {
         val tab = activeTab ?: return
-        val newZoom = (tab.zoomLevel + ZOOM_STEP).coerceAtMost(ZOOM_MAX)
+        val newZoom = (tab.zoomLevel + 25).coerceAtMost(200)
         updateTab(tab.id) { it.copy(zoomLevel = newZoom) }
-        
-        tab.webView?.let { wv ->
-            tabManager.applyZoomImmediate(wv, newZoom)
-            
-            handler.postDelayed({
-                tabManager.applyZoomImmediate(wv, newZoom)
-            }, 50)
-        }
+        tab.webView?.let { tabManager.applyZoomImmediate(it, newZoom) }
     }
 
     fun zoomOut() {
         val tab = activeTab ?: return
-        val newZoom = (tab.zoomLevel - ZOOM_STEP).coerceAtLeast(ZOOM_MIN)
+        val newZoom = (tab.zoomLevel - 25).coerceAtLeast(50)
         updateTab(tab.id) { it.copy(zoomLevel = newZoom) }
-        
-        tab.webView?.let { wv ->
-            tabManager.applyZoomImmediate(wv, newZoom)
-            
-            handler.postDelayed({
-                tabManager.applyZoomImmediate(wv, newZoom)
-            }, 50)
-        }
-    }
-
-    fun zoomReset() {
-        val tab = activeTab ?: return
-        updateTab(tab.id) { it.copy(zoomLevel = 100) }
-        
-        tab.webView?.let { wv ->
-            tabManager.applyZoomImmediate(wv, 100)
-            
-            handler.postDelayed({
-                tabManager.applyZoomImmediate(wv, 100)
-            }, 50)
-        }
+        tab.webView?.let { tabManager.applyZoomImmediate(it, newZoom) }
     }
 
     fun toggleDesktopMode() {
@@ -214,14 +164,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val currentUrl = tab.url.ifEmpty { HOMEPAGE }
         
         val oldWebView = tab.webView
-        if (oldWebView != null) {
-            try {
-                oldWebView.stopLoading()
-                oldWebView.destroy()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        oldWebView?.stopLoading()
+        oldWebView?.destroy()
 
         val newDesktopMode = !tab.isDesktopMode
         
@@ -253,15 +197,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             .filter { it.id != _activeTabId.value }
             .forEach { tab ->
                 tab.webView?.let { wv ->
-                    try {
-                        val bundle = Bundle()
-                        wv.saveState(bundle)
-                        wv.destroy()
-                        tab.webView = null
-                        tab.savedState = bundle
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    val bundle = Bundle()
+                    wv.saveState(bundle)
+                    wv.destroy()
+                    tab.webView = null
+                    tab.savedState = bundle
                 }
             }
     }
@@ -269,15 +209,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     override fun onCleared() {
         super.onCleared()
         _tabs.value.forEach { tab ->
-            try {
-                tab.webView?.destroy()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            tab.webView?.destroy()
         }
     }
 
-    private fun updateTab(tabId: String, transform: (BrowserTab) -> BrowserTab) {
+    private fun updateTab(tabId: Long, transform: (BrowserTab) -> BrowserTab) {
         _tabs.value = _tabs.value.map { tab ->
             if (tab.id == tabId) transform(tab) else tab
         }

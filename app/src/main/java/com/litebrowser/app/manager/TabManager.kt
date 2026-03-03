@@ -15,12 +15,12 @@ class TabManager(private val context: Context) {
 
     private val handler = Handler(Looper.getMainLooper())
 
-    var onPageStarted: (tabId: String, url: String) -> Unit = { _, _ -> }
-    var onPageFinished: (tabId: String, url: String, title: String) -> Unit = { _, _, _ -> }
-    var onProgressChanged: (tabId: String, progress: Int) -> Unit = { _, _ -> }
-    var onHistoryChanged: (tabId: String, canBack: Boolean, canFwd: Boolean) -> Unit = { _, _, _ -> }
-    var getTabZoomLevel: (tabId: String) -> Int = { 100 }
-    var getTabDesktopMode: (tabId: String) -> Boolean = { false }
+    var onPageStarted: (tabId: Long, url: String) -> Unit = { _, _ -> }
+    var onPageFinished: (tabId: Long, url: String, title: String) -> Unit = { _, _, _ -> }
+    var onProgressChanged: (tabId: Long, progress: Int) -> Unit = { _, _ -> }
+    var onHistoryChanged: (tabId: Long, canBack: Boolean, canFwd: Boolean) -> Unit = { _, _, _ -> }
+    var getTabZoomLevel: (tabId: Long) -> Int = { 100 }
+    var getTabDesktopMode: (tabId: Long) -> Boolean = { false }
 
     fun createWebView(tab: BrowserTab): WebView {
         val wv = WebView(context)
