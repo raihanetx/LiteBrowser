@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,7 +16,7 @@ fun SettingsScreen(
     viewModel: BrowserViewModel,
     onBack: () -> Unit
 ) {
-    val textZoom = remember { viewModel.textZoomLevel }
+    // Access the state directly - Compose will observe changes
 
     Scaffold(
         topBar = {
@@ -66,16 +65,16 @@ fun SettingsScreen(
 
                     // Current value display
                     Text(
-                        text = "${textZoom.value}%",
+                        text = "${viewModel.textZoomLevel.value}%",
                         style = MaterialTheme.typography.headlineMedium,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
 
                     // Slider
                     Slider(
-                        value = textZoom.value.toFloat(),
+                        value = viewModel.textZoomLevel.value.toFloat(),
                         onValueChange = { viewModel.textZoomLevel.value = it.toInt() },
-                        onValueChangeFinished = { viewModel.setTextZoom(textZoom.value) },
+                        onValueChangeFinished = { viewModel.setTextZoom(viewModel.textZoomLevel.value) },
                         valueRange = 80f..200f,
                         steps = 11, // 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200
                         modifier = Modifier.fillMaxWidth()

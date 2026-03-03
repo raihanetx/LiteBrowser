@@ -31,6 +31,9 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
     companion object {
         private const val DUCKDUCKGO_LITE = "https://duckduckgo.com/lite"
         private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        private const val ZOOM_STEP = 10 // 10% increments
+        private const val MIN_ZOOM = 50  // 50% minimum
+        private const val MAX_ZOOM = 300 // 300% maximum
     }
 
     init {
@@ -210,30 +213,55 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         return webView
     }
 
-    // ZOOM METHODS - Using WebView native zoom
+    // ZOOM METHODS - Using JavaScript for reliable zoom
     fun zoomIn() {
         val webView = getCurrentTab()?.webView ?: return
-        webView.zoomIn()
+        val currentUrl = getCurrentTab()?.url ?: return
+        val domain = settingsManager.extractDomain(currentUrl)
+
+        val currentZoom = settingsManager.getDomainZoom(domain)
+        val newZoom = (currentZoom + ZOOM_STEP).coerceAtMost(MAX_ZOOM)
+
+        settingsManager.setDomainZoom(domain, newZoom)
+        applyZoomToWebView(webView, newZoom)
     }
 
     fun zoomOut() {
         val webView = getCurrentTab()?.webView ?: return
-        webView.zoomOut()
+        val currentUrl = getCurrentTab()?.url ?: return
+        val domain = settingsManager.extractDomain(currentUrl)
+
+        val currentZoom = settingsManager.getDomainZoom(domain)
+        val newZoom = (currentZoom - ZOOM_STEP).coerceAtLeast(MIN_ZOOM)
+
+        settingsManager.setDomainZoom(domain, newZoom)
+        applyZoomToWebView(webView, newZoom)
     }
 
     fun resetZoom() {
         val webView = getCurrentTab()?.webView ?: return
-        // Reset to 100%
-        webView.setInitialScale(100)
         val currentUrl = getCurrentTab()?.url ?: return
         val domain = settingsManager.extractDomain(currentUrl)
+
         settingsManager.setDomainZoom(domain, 100)
-        webView.reload()
+        applyZoomToWebView(webView, 100)
+    }
+
+    private fun applyZoomToWebView(webView: WebView, zoomPercent: Int) {
+        val zoomLevel = zoomPercent / 100.0
+        val script = """
+            (function() {
+                document.body.style.zoom = '$zoomLevel';
+                document.body.style.transformOrigin = 'top left';
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script, null)
     }
 
     fun getCurrentZoomLevel(): Int {
-        val webView = getCurrentTab()?.webView ?: return 100
-        return (webView.scale * 100).toInt()
+        val currentUrl = getCurrentTab()?.url ?: return 100
+        val domain = settingsManager.extractDomain(currentUrl)
+        return settingsManager.getDomainZoom(domain)
     }
 
     // Apply zoom for specific domain
@@ -241,8 +269,8 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         webView ?: return
         val domain = settingsManager.extractDomain(url)
         val savedZoom = settingsManager.getDomainZoom(domain)
-        // Set initial scale based on saved zoom
-        webView.setInitialScale(savedZoom)
+        // Apply zoom via JavaScript
+        applyZoomToWebView(webView, savedZoom)
     }
 
     private fun applyDomainZoomToCurrentTab() {
