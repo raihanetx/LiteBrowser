@@ -3,6 +3,9 @@ package com.browser.app.viewmodel
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
+import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -23,6 +26,10 @@ class BrowserViewModel : ViewModel() {
     companion object {
         private const val DUCKDUCKGO_LITE = "https://duckduckgo.com/lite"
         private const val DESKTOP_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        private const val ZOOM_STEP = 0.25f
+        private const val MIN_ZOOM = 0.5f
+        private const val MAX_ZOOM = 3.0f
+        private const val DEFAULT_ZOOM = 1.0f
     }
 
     init {
@@ -90,6 +97,18 @@ class BrowserViewModel : ViewModel() {
                 }
             }
             
+            // Periodic injection handler for SPAs
+            val injectionHandler = Handler(Looper.getMainLooper())
+            val injectionRunnable = object : Runnable {
+                override fun run() {
+                    if (tab.desktopMode && tab.webView != null) {
+                        injectDesktopModeScripts(tab.webView)
+                        // Re-inject every 2 seconds while desktop mode is active
+                        injectionHandler.postDelayed(this, 2000)
+                    }
+                }
+            }
+
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(
                     view: WebView?,
@@ -97,14 +116,20 @@ class BrowserViewModel : ViewModel() {
                 ): Boolean {
                     return false
                 }
-                
+
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                     super.onPageStarted(view, url, favicon)
                     tab.isLoading = true
                     tab.url = url ?: ""
                     updateUrlInputFromCurrentTab()
+
+                    // Start periodic injection for SPAs
+                    if (tab.desktopMode) {
+                        injectionHandler.removeCallbacks(injectionRunnable)
+                        injectionHandler.postDelayed(injectionRunnable, 1000)
+                    }
                 }
-                
+
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
                     tab.isLoading = false
@@ -113,6 +138,27 @@ class BrowserViewModel : ViewModel() {
                     tab.canGoBack = view?.canGoBack() ?: false
                     tab.canGoForward = view?.canGoForward() ?: false
                     updateUrlInputFromCurrentTab()
+
+                    // Inject desktop mode JavaScript if enabled
+                    if (tab.desktopMode) {
+                        injectDesktopModeScripts(view)
+                    }
+                }
+
+                // Catch SPA navigation (URL changes without page reload)
+                override fun doUpdateVisitedHistory(
+                    view: WebView?,
+                    url: String?,
+                    isReload: Boolean
+                ) {
+                    super.doUpdateVisitedHistory(view, url, isReload)
+                    tab.url = url ?: ""
+                    updateUrlInputFromCurrentTab()
+
+                    // Re-inject for SPAs on history update
+                    if (tab.desktopMode && !isReload) {
+                        injectDesktopModeScripts(view)
+                    }
                 }
             }
             
@@ -167,25 +213,147 @@ class BrowserViewModel : ViewModel() {
     fun reload() {
         getCurrentTab()?.webView?.reload()
     }
-    
+
     fun zoomIn() {
-        val webView = getCurrentTab()?.webView ?: return
-        val currentZoom = webView.settings.textZoom
-        webView.settings.textZoom = (currentZoom + 10).coerceAtMost(200)
+        val tab = getCurrentTab() ?: return
+        val webView = tab.webView ?: return
+
+        val newZoom = (tab.zoomLevel + ZOOM_STEP).coerceAtMost(MAX_ZOOM)
+        tab.zoomLevel = newZoom
+
+        webView.apply {
+            scaleX = newZoom
+            scaleY = newZoom
+        }
     }
 
     fun zoomOut() {
-        val webView = getCurrentTab()?.webView ?: return
-        val currentZoom = webView.settings.textZoom
-        webView.settings.textZoom = (currentZoom - 10).coerceAtLeast(50)
+        val tab = getCurrentTab() ?: return
+        val webView = tab.webView ?: return
+
+        val newZoom = (tab.zoomLevel - ZOOM_STEP).coerceAtLeast(MIN_ZOOM)
+        tab.zoomLevel = newZoom
+
+        webView.apply {
+            scaleX = newZoom
+            scaleY = newZoom
+        }
     }
-    
+
+    fun resetZoom() {
+        val tab = getCurrentTab() ?: return
+        val webView = tab.webView ?: return
+
+        tab.zoomLevel = DEFAULT_ZOOM
+        webView.apply {
+            scaleX = DEFAULT_ZOOM
+            scaleY = DEFAULT_ZOOM
+        }
+    }
+
+    fun getCurrentZoomLevel(): Float {
+        return getCurrentTab()?.zoomLevel ?: DEFAULT_ZOOM
+    }
+
+    fun applyZoomToWebView(tab: Tab) {
+        tab.webView?.apply {
+            scaleX = tab.zoomLevel
+            scaleY = tab.zoomLevel
+        }
+    }
+
+    fun injectDesktopModeScripts(webView: WebView?) {
+        webView ?: return
+
+        val desktopModeScript = """
+            (function() {
+                // 1. Remove viewport meta tag restrictions
+                var viewportMeta = document.querySelector('meta[name="viewport"]');
+                if (viewportMeta) {
+                    viewportMeta.content = 'width=1280, initial-scale=1.0';
+                } else {
+                    var meta = document.createElement('meta');
+                    meta.name = 'viewport';
+                    meta.content = 'width=1280, initial-scale=1.0';
+                    document.head.appendChild(meta);
+                }
+
+                // 2. Mask touch detection - Remove ontouchstart from window
+                delete window.ontouchstart;
+                delete window.ontouchmove;
+                delete window.ontouchend;
+                delete window.ontouchcancel;
+
+                // Override maxTouchPoints to return 0 (no touch support)
+                Object.defineProperty(navigator, 'maxTouchPoints', {
+                    get: function() { return 0; }
+                });
+
+                // 3. Spoof screen dimensions to look like desktop
+                Object.defineProperty(screen, 'width', {
+                    get: function() { return 1920; }
+                });
+                Object.defineProperty(screen, 'height', {
+                    get: function() { return 1080; }
+                });
+                Object.defineProperty(screen, 'availWidth', {
+                    get: function() { return 1920; }
+                });
+                Object.defineProperty(screen, 'availHeight', {
+                    get: function() { return 1040; }
+                });
+
+                // 4. Override window size to match desktop
+                Object.defineProperty(window, 'innerWidth', {
+                    get: function() { return 1280; }
+                });
+                Object.defineProperty(window, 'innerHeight', {
+                    get: function() { return 720; }
+                });
+
+                // 5. Spoof devicePixelRatio to 1 (desktop standard)
+                Object.defineProperty(window, 'devicePixelRatio', {
+                    get: function() { return 1; }
+                });
+
+                // 6. Hide pointer events that indicate touch
+                if (window.PointerEvent) {
+                    const originalPointerEvent = window.PointerEvent;
+                    window.PointerEvent = function(type, init) {
+                        if (init && init.pointerType === 'touch') {
+                            init.pointerType = 'mouse';
+                        }
+                        return new originalPointerEvent(type, init);
+                    };
+                }
+
+                // 7. Override matchMedia for pointer queries
+                const originalMatchMedia = window.matchMedia;
+                window.matchMedia = function(query) {
+                    if (query.includes('pointer: coarse')) {
+                        return { matches: false, media: query };
+                    }
+                    if (query.includes('pointer: fine')) {
+                        return { matches: true, media: query };
+                    }
+                    if (query.includes('hover: none')) {
+                        return { matches: false, media: query };
+                    }
+                    return originalMatchMedia(query);
+                };
+            })();
+        """.trimIndent()
+
+        webView.evaluateJavascript(desktopModeScript, null)
+    }
+
     fun toggleDesktopMode() {
         val currentTab = getCurrentTab() ?: return
         currentTab.desktopMode = !currentTab.desktopMode
 
         val webView = currentTab.webView ?: return
         val context = webView.context
+        val currentUrl = currentTab.url
 
         webView.settings.apply {
             userAgentString = if (currentTab.desktopMode) {
@@ -193,11 +361,32 @@ class BrowserViewModel : ViewModel() {
             } else {
                 WebSettings.getDefaultUserAgent(context)
             }
+            // Force viewport to desktop width when in desktop mode
+            useWideViewPort = currentTab.desktopMode
+            loadWithOverviewMode = currentTab.desktopMode
         }
 
-        // Clear cache to ensure the page reloads with new user agent
-        webView.clearCache(false)
-        webView.reload()
+        // Clear all forms of cache to ensure the page reloads with new user agent
+        webView.clearCache(true)
+        webView.clearHistory()
+
+        // Clear cookies for this domain to reset any mobile/desktop preferences
+        CookieManager.getInstance().removeAllCookies(null)
+        CookieManager.getInstance().flush()
+
+        // Reload with cache disabled to force fresh request with new UA
+        webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+        webView.loadUrl(currentUrl)
+
+        // Restore default cache mode after loading
+        webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+
+        // Inject desktop mode scripts after page loads
+        if (currentTab.desktopMode) {
+            webView.postDelayed({
+                injectDesktopModeScripts(webView)
+            }, 500)
+        }
     }
     
     override fun onCleared() {

@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -106,30 +107,49 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
         },
         bottomBar = {
             BottomAppBar(
-                modifier = Modifier.height(56.dp)
+                modifier = Modifier.height(64.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    IconButton(onClick = { viewModel.zoomOut() }) {
-                        Icon(Icons.Default.Remove, "Zoom out")
-                    }
-                    IconButton(onClick = { viewModel.zoomIn() }) {
-                        Icon(Icons.Default.Add, "Zoom in")
-                    }
-                    IconButton(onClick = { viewModel.toggleDesktopMode() }) {
-                        Icon(
-                            if (currentTab?.desktopMode == true) 
-                                Icons.Default.PhoneAndroid 
-                            else 
-                                Icons.Default.Computer,
-                            if (currentTab?.desktopMode == true) "Mobile mode" else "Desktop mode"
+                    // Zoom level indicator
+                    val zoomLevel = viewModel.getCurrentZoomLevel()
+                    if (zoomLevel != 1.0f) {
+                        Text(
+                            text = "${(zoomLevel * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                     }
-                    IconButton(onClick = { viewModel.addNewTab() }) {
-                        Icon(Icons.Default.AddCircle, "New tab")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { viewModel.zoomOut() }) {
+                            Icon(Icons.Default.Remove, "Zoom out")
+                        }
+                        IconButton(onClick = { viewModel.zoomIn() }) {
+                            Icon(Icons.Default.Add, "Zoom in")
+                        }
+                        IconButton(
+                            onClick = { viewModel.resetZoom() },
+                            enabled = zoomLevel != 1.0f
+                        ) {
+                            Icon(Icons.Default.ZoomOutMap, "Reset zoom")
+                        }
+                        IconButton(onClick = { viewModel.toggleDesktopMode() }) {
+                            Icon(
+                                if (currentTab?.desktopMode == true)
+                                    Icons.Default.PhoneAndroid
+                                else
+                                    Icons.Default.Computer,
+                                if (currentTab?.desktopMode == true) "Mobile mode" else "Desktop mode"
+                            )
+                        }
+                        IconButton(onClick = { viewModel.addNewTab() }) {
+                            Icon(Icons.Default.AddCircle, "New tab")
+                        }
                     }
                 }
             }

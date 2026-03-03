@@ -12,7 +12,8 @@ data class Tab(
     var progress: Int = 0,
     var canGoBack: Boolean = false,
     var canGoForward: Boolean = false,
-    var desktopMode: Boolean = false
+    var desktopMode: Boolean = false,
+    var zoomLevel: Float = 1.0f
 ) {
     @Transient
     var webView: WebView? = null
