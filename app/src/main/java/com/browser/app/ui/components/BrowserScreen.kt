@@ -1,27 +1,36 @@
 package com.browser.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.browser.app.ui.screens.SettingsScreen
 import com.browser.app.viewmodel.BrowserViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowserScreen(viewModel: BrowserViewModel) {
     val currentTab = viewModel.getCurrentTab()
-    
+
+    // Show Settings Screen
+    if (viewModel.showSettings.value) {
+        SettingsScreen(
+            viewModel = viewModel,
+            onBack = { viewModel.showSettings.value = false }
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             Column {
@@ -86,8 +95,11 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                                     }
                                 }
                             ) {
-                                Icon(Icons.Default.List, "Tabs")
+                                Icon(Icons.Filled.List, "Tabs")
                             }
+                        }
+                        IconButton(onClick = { viewModel.showSettings.value = true }) {
+                            Icon(Icons.Default.Settings, "Settings")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -95,7 +107,7 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                         titleContentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 )
-                
+
                 // Progress bar
                 if (currentTab?.isLoading == true) {
                     LinearProgressIndicator(
@@ -112,11 +124,11 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Zoom level indicator
+                    // Zoom level indicator - shows current page zoom percentage
                     val zoomLevel = viewModel.getCurrentZoomLevel()
-                    if (zoomLevel != 1.0f) {
+                    if (zoomLevel != 100) {
                         Text(
-                            text = "${(zoomLevel * 100).toInt()}%",
+                            text = "$zoomLevel%",
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
@@ -134,7 +146,7 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
                         }
                         IconButton(
                             onClick = { viewModel.resetZoom() },
-                            enabled = zoomLevel != 1.0f
+                            enabled = zoomLevel != 100
                         ) {
                             Icon(Icons.Default.ZoomOutMap, "Reset zoom")
                         }
@@ -166,7 +178,7 @@ fun BrowserScreen(viewModel: BrowserViewModel) {
             )
         }
     }
-    
+
     // Tabs Overview Dialog
     if (viewModel.showTabsOverview.value) {
         TabsOverview(

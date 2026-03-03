@@ -51,12 +51,9 @@ fun WebViewManager(
                 val isCurrentTab = index == viewModel.currentTabIndex.value
                 webView.visibility = if (isCurrentTab) View.VISIBLE else View.GONE
 
-                // Apply zoom and desktop mode when tab becomes visible
-                if (isCurrentTab) {
-                    viewModel.applyZoomToWebView(tab)
-                    if (tab.desktopMode) {
-                        viewModel.injectDesktopModeScripts(webView)
-                    }
+                // Apply desktop mode scripts when tab becomes visible
+                if (isCurrentTab && tab.desktopMode) {
+                    viewModel.injectDesktopModeScripts(webView)
                 }
             }
         },
