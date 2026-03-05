@@ -469,13 +469,27 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
 
     fun navigateToUrl(url: String) {
         val currentTab = getCurrentTab() ?: return
-        var finalUrl = url
+        if (url.isBlank()) return
+        
+        var finalUrl = url.trim()
 
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            finalUrl = "https://$url"
+        // If it's a search query (contains spaces or no dots), use DuckDuckGo
+        if (!finalUrl.contains(".") || finalUrl.contains(" ")) {
+            finalUrl = "https://duckduckgo.com/?q=${finalUrl.replace(" ", "+")}"
+        } else if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+            finalUrl = "https://$finalUrl"
         }
 
-        currentTab.webView?.loadUrl(finalUrl)
+        // Update tab URL immediately
+        currentTab.url = finalUrl
+        
+        // Load in WebView
+        if (currentTab.webView != null) {
+            currentTab.webView?.loadUrl(finalUrl)
+        } else {
+            // If WebView not created yet, it will load when created
+            urlInput.value = finalUrl
+        }
     }
 
     fun goBack() {
