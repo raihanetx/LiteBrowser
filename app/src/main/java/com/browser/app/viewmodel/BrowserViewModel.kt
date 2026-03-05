@@ -29,7 +29,7 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
     val textZoomLevel = mutableStateOf(100)
     var isDarkMode by mutableStateOf(false)
 
-    private val settingsManager = SettingsManager(context)
+    val settingsManager = SettingsManager(context)
 
     companion object {
         private const val DUCKDUCKGO_LITE = "https://duckduckgo.com/lite"
@@ -272,7 +272,7 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
         applyZoomToWebView(webView, 100)
     }
 
-    private fun applyZoomToWebView(webView: WebView, zoomPercent: Int) {
+    fun applyZoomToWebView(webView: WebView, zoomPercent: Int) {
         val zoomLevel = zoomPercent / 100.0
         val script = """
             (function() {

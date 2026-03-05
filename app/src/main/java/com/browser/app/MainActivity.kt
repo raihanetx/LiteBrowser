@@ -52,8 +52,10 @@ class MainActivity : ComponentActivity() {
         viewModel = ViewModelProvider(this, factory)[BrowserViewModel::class.java]
 
         setContent {
+            val isDarkMode by remember { derivedStateOf { viewModel.isDarkMode } }
+            
             MaterialTheme(
-                colorScheme = if (viewModel.isDarkMode) darkColorScheme(
+                colorScheme = if (isDarkMode) darkColorScheme(
                     background = Color.Black,
                     surface = Color.Black,
                     onBackground = Color.White,
@@ -521,7 +523,7 @@ fun EvenlyTabSheet(viewModel: BrowserViewModel, onClose: () -> Unit) {
                 }
             }
         }
-        Divider(color = fg.copy(alpha = 0.1f))
+        HorizontalDivider(color = fg.copy(alpha = 0.1f))
 
         // Grid
         LazyVerticalGrid(
@@ -535,7 +537,6 @@ fun EvenlyTabSheet(viewModel: BrowserViewModel, onClose: () -> Unit) {
                 EvenlyTabItem(
                     tab = tab,
                     isActive = index == viewModel.currentTabIndex.value,
-                    isDark = viewModel.isDarkMode,
                     onSelect = { 
                         viewModel.switchToTab(index)
                         onClose()
@@ -566,7 +567,7 @@ fun EvenlyTabSheet(viewModel: BrowserViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-fun EvenlyTabItem(tab: com.browser.app.model.Tab, isActive: Boolean, isDark: Boolean, onSelect: () -> Unit, onClose: () -> Unit) {
+fun EvenlyTabItem(tab: com.browser.app.model.Tab, isActive: Boolean, onSelect: () -> Unit, onClose: () -> Unit) {
     val fg = MaterialTheme.colorScheme.onBackground
     val bg = MaterialTheme.colorScheme.background
     
@@ -668,14 +669,14 @@ fun EvenlyMenu(viewModel: BrowserViewModel, onDismiss: () -> Unit) {
                         checked = viewModel.isDarkMode, 
                         onClick = { viewModel.isDarkMode = !viewModel.isDarkMode }
                     )
-                    Divider(color = Color.Gray.copy(0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = Color.Gray.copy(0.1f), thickness = 1.dp)
                     
                     EvenlyMenuItem(
                         text = "Desktop Site", 
                         checked = viewModel.getCurrentTab()?.desktopMode == true, 
                         onClick = { viewModel.toggleDesktopMode() }
                     )
-                    Divider(color = Color.Gray.copy(0.1f), thickness = 1.dp)
+                    HorizontalDivider(color = Color.Gray.copy(0.1f), thickness = 1.dp)
                     
                     EvenlyMenuItem(text = "Zoom In", onClick = { viewModel.zoomIn(); onDismiss() })
                     EvenlyMenuItem(text = "Zoom Out", onClick = { viewModel.zoomOut(); onDismiss() })
@@ -708,24 +709,47 @@ fun EvenlyMenuItem(text: String, checked: Boolean = false, onClick: () -> Unit) 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun EvenlyWebView(url: String, viewModel: BrowserViewModel) {
+    val currentTab = viewModel.getCurrentTab()
+    
     AndroidView(
         factory = { context ->
             WebView(context).apply {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.saveFormData = true
-                webViewClient = WebViewClient()
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                settings.setSupportZoom(true)
+                settings.builtInZoomControls = true
+                settings.displayZoomControls = false
                 
-                // Apply settings
-                settings.textZoom = viewModel.getTextZoom()
-                if (viewModel.getCurrentTab()?.desktopMode == true) {
-                    settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        // Apply zoom after page loads
+                        currentTab?.let { tab ->
+                            val domain = viewModel.settingsManager.extractDomain(tab.url)
+                            val zoom = viewModel.settingsManager.getDomainZoom(domain)
+                            if (zoom != 100) {
+                                viewModel.applyZoomToWebView(view!!, zoom)
+                            }
+                        }
+                    }
                 }
                 
                 loadUrl(url)
             }
         },
         update = { webView ->
+            // Apply desktop mode if changed
+            if (currentTab?.desktopMode == true) {
+                webView.settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                webView.settings.useWideViewPort = true
+            } else {
+                webView.settings.userAgentString = null
+                webView.settings.useWideViewPort = false
+            }
+            
             if (webView.url != url) {
                 webView.loadUrl(url)
             }
