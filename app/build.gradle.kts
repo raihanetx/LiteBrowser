@@ -61,6 +61,9 @@ dependencies {
     // WebView
     implementation("androidx.webkit:webkit:1.9.0")
     
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

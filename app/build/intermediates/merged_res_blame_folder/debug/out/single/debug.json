@@ -1,14 +1,18 @@
 [
     {
-        "merged": "com.browser.app-merged_res-47:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.browser.app-main-49:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.browser.app-merged_res-49:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.browser.app-main-51:/mipmap-anydpi-v26/ic_launcher_round.xml"
     },
     {
-        "merged": "com.browser.app-merged_res-47:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.browser.app-main-49:/drawable/ic_launcher_foreground.xml"
+        "merged": "com.browser.app-merged_res-49:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.browser.app-main-51:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "com.browser.app-merged_res-47:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.browser.app-main-49:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "com.browser.app-merged_res-49:/font_vt323.ttf.flat",
+        "source": "com.browser.app-main-51:/font/vt323.ttf"
+    },
+    {
+        "merged": "com.browser.app-merged_res-49:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.browser.app-main-51:/drawable/ic_launcher_foreground.xml"
     }
 ]

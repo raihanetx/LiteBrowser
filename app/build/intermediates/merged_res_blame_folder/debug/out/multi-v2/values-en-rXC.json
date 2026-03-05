@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.browser.app-mergeDebugResources-45:/values-en-rXC/values-en-rXC.xml",
+            "outputFile": "com.browser.app-mergeDebugResources-47:/values-en-rXC/values-en-rXC.xml",
             "map": [
                 {
                     "source": "/home/user/.gradle/caches/transforms-3/efdb41805c75959ad8cdc9f42e455ccc/transformed/ui-release/res/values-en-rXC/values-en-rXC.xml",

@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.browser.app-mergeDebugResources-45:/values-iw/values-iw.xml",
+            "outputFile": "com.browser.app-mergeDebugResources-47:/values-iw/values-iw.xml",
             "map": [
                 {
                     "source": "/home/user/.gradle/caches/transforms-3/55324a7a9ef0d48d1693be50b5fcfd9e/transformed/material3-release/res/values-iw/values-iw.xml",

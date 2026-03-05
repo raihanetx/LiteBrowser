@@ -8,6 +8,7 @@ color teal_200
 color teal_700
 color white
 drawable ic_launcher_foreground
+font vt323
 mipmap ic_launcher
 mipmap ic_launcher_round
 string app_name

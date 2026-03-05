@@ -11,8 +11,10 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.browser.app.data.SettingsManager
 import com.browser.app.model.Tab
@@ -25,6 +27,7 @@ class BrowserViewModel(private val context: Context) : ViewModel() {
     val urlInput = mutableStateOf("")
     val showSettings = mutableStateOf(false)
     val textZoomLevel = mutableStateOf(100)
+    var isDarkMode by mutableStateOf(false)
 
     private val settingsManager = SettingsManager(context)
 
