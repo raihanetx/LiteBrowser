@@ -1,9 +1,6 @@
 package com.example.browser
 
 import android.annotation.SuppressLint
-import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
@@ -13,9 +10,8 @@ import android.view.animation.AnimationUtils
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.AbsoluteLayout
-import android.widget.FrameLayout
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -47,6 +43,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnMenu: ImageView
     private lateinit var btnRefresh: ImageView
 
+    private var tabSliderShown = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setupUI()
@@ -54,10 +52,16 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled", "InflateParams")
     private fun setupUI() {
+        val rootLayout = FrameLayout(this)
+        rootLayout.layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
         mainContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFFF5F5F5.toInt())
-            layoutParams = ViewGroup.LayoutParams(
+            layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
@@ -66,9 +70,27 @@ class MainActivity : AppCompatActivity() {
         setupTopBar()
         setupWebView()
         setupBottomNav()
-        setupTabSystem()
 
-        setContentView(mainContainer)
+        mainContainer.addView(progressBar)
+
+        tabOverlay = View(this).apply {
+            setBackgroundColor(0xE6000000.toInt())
+            visibility = View.GONE
+            alpha = 0f
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { hideTabSlider() }
+        }
+
+        setupTabContainer()
+
+        rootLayout.addView(mainContainer)
+        rootLayout.addView(tabOverlay)
+        rootLayout.addView(tabContainer)
+
+        setContentView(rootLayout)
         webView.loadUrl("https://www.google.com")
     }
 
@@ -80,7 +102,6 @@ class MainActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            elevation = 8f
         }
 
         urlBar = EditText(this).apply {
@@ -92,50 +113,26 @@ class MainActivity : AppCompatActivity() {
             layoutParams = RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.MATCH_PARENT,
                 RelativeLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                addRule(RelativeLayout.ALIGN_PARENT_START)
-                addRule(RelativeLayout.ALIGN_PARENT_END)
-            }
+            )
             setOnEditorActionListener { _, _, _ ->
                 loadUrl()
                 true
             }
         }
 
-        val refreshIcon = ImageView(this).apply {
+        btnRefresh = ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_rotate)
             setColorFilter(0xFF2196F3.toInt())
-            layoutParams = RelativeLayout.LayoutParams(48, 48).apply {
+            layoutParams = RelativeLayout.LayoutParams(64, 64).apply {
                 addRule(RelativeLayout.ALIGN_PARENT_END)
                 marginEnd = 8
             }
             setOnClickListener { webView.reload() }
         }
 
-        val menuIcon = ImageView(this).apply {
-            setImageResource(android.R.drawable.ic_menu_more)
-            setColorFilter(0xFF2196F3.toInt())
-            layoutParams = RelativeLayout.LayoutParams(56, 56).apply {
-                addRule(RelativeLayout.ALIGN_PARENT_END)
-            }
-            setOnClickListener { showModernMenu(it) }
-        }
-
         topBar.addView(urlBar)
-        topBar.addView(refreshIcon)
-        topBar.addView(menuIcon)
-
+        topBar.addView(btnRefresh)
         mainContainer.addView(topBar)
-
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            progressTintList = android.content.res.ColorStateList.valueOf(0xFF2196F3.toInt())
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                8
-            )
-        }
-        mainContainer.addView(progressBar)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -146,18 +143,15 @@ class MainActivity : AppCompatActivity() {
                 0,
                 1f
             )
-            settings.apply {
-                javaScriptEnabled = true
-                domStorageEnabled = true
-                loadWithOverviewMode = true
-                useWideViewPort = true
-                builtInZoomControls = true
-                displayZoomControls = false
-                setSupportZoom(true)
-            }
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.loadWithOverviewMode = true
+            settings.useWideViewPort = true
+            settings.builtInZoomControls = true
+            settings.displayZoomControls = false
 
             webViewClient = object : WebViewClient() {
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                     progressBar.visibility = View.VISIBLE
                     super.onPageStarted(view, url, favicon)
                 }
@@ -175,6 +169,17 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progressTintList = android.content.res.ColorStateList.valueOf(0xFF2196F3.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                8
+            )
+            visibility = View.GONE
+        }
+
         mainContainer.addView(webView)
     }
 
@@ -184,7 +189,6 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(ContextCompat.getColor(this@MainActivity, android.R.color.white))
             setPadding(16, 24, 16, 32)
             gravity = Gravity.CENTER
-            elevation = 16f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -223,7 +227,7 @@ class MainActivity : AppCompatActivity() {
     private fun createNavIcon(icon: Int, contentDesc: String, onClick: () -> Unit): ImageView {
         return ImageView(this).apply {
             setImageResource(icon)
-            setColorFilter(if (isDarkMode) 0xFFFFFFFF.toInt() else 0xFF333333.toInt())
+            setColorFilter(0xFF333333.toInt())
             layoutParams = LinearLayout.LayoutParams(0, 96, 1f).apply {
                 gravity = Gravity.CENTER
             }
@@ -232,14 +236,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("InflateParams")
-    private fun setupTabSystem() {
-        tabOverlay = View(this).apply {
-            setBackgroundColor(0xE6000000.toInt())
-            visibility = View.GONE
-            alpha = 0f
-        }
-
+    private fun setupTabContainer() {
         tabContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFFFFFFFF.toInt())
@@ -288,21 +285,16 @@ class MainActivity : AppCompatActivity() {
             setPadding(24, 24, 24, 24)
         }
 
-        for (i in 1..8) {
+        for (i in 1..5) {
             val tabCard = CardView(this).apply {
                 radius = 24f
                 cardElevation = 8f
                 setCardBackgroundColor(0xFFF5F5F5.toInt())
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
-                    200
+                    180
                 ).apply {
                     setMargins(16, 16, 16, 16)
-                }
-                setOnClickListener {
-                    hideTabSlider()
-                    urlBar.setText("https://www.google.com")
-                    webView.loadUrl("https://www.google.com")
                 }
             }
 
@@ -326,7 +318,7 @@ class MainActivity : AppCompatActivity() {
 
             val title = TextView(this).apply {
                 text = "Google - Tab $i"
-                textSize = 20f
+                textSize = 18f
                 setTextColor(0xFF333333.toInt())
             }
 
@@ -339,11 +331,14 @@ class MainActivity : AppCompatActivity() {
             tabInfo.addView(title)
             tabInfo.addView(url)
             tabContent.addView(favicon)
-            tabContent.addView(tabCard)
+            tabContent.addView(tabInfo)
             tabCard.addView(tabContent)
 
-            tabInfo.setOnClickListener { tabCard.performClick() }
-            favicon.setOnClickListener { tabCard.performClick() }
+            tabCard.setOnClickListener {
+                hideTabSlider()
+                urlBar.setText("https://www.google.com")
+                webView.loadUrl("https://www.google.com")
+            }
 
             tabsGrid.addView(tabCard)
         }
@@ -355,10 +350,6 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(0xFF2196F3.toInt())
             setPadding(48, 32, 48, 48)
             gravity = Gravity.CENTER
-            setOnClickListener {
-                hideTabSlider()
-                showMessage("New tab created")
-            }
         }
 
         val addTabText = TextView(this).apply {
@@ -369,18 +360,18 @@ class MainActivity : AppCompatActivity() {
 
         addTabBtn.addView(addTabText)
 
+        addTabBtn.setOnClickListener {
+            hideTabSlider()
+            showMessage("New tab created")
+        }
+
         tabContainer.addView(tabHeader)
         tabContainer.addView(tabsScroll)
         tabContainer.addView(addTabBtn)
-
-        val rootView = findViewById<View>(android.R.id.content)
-        if (rootView is FrameLayout) {
-            rootView.addView(tabOverlay)
-            rootView.addView(tabContainer)
-        }
     }
 
     private fun showTabSlider() {
+        tabSliderShown = true
         tabOverlay.visibility = View.VISIBLE
         tabContainer.visibility = View.VISIBLE
         tabOverlay.animate().alpha(1f).setDuration(200).start()
@@ -388,6 +379,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hideTabSlider() {
+        tabSliderShown = false
         tabOverlay.animate().alpha(0f).setDuration(200).withEndAction {
             tabOverlay.visibility = View.GONE
         }.start()
@@ -398,26 +390,23 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("InflateParams")
     private fun showModernMenu(anchor: View) {
-        val popupView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null) as? ViewGroup
-            ?: LinearLayout(this)
-
         val menuLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFFFFFFFF.toInt())
-            setPadding(32, 16, 32, 16)
+            setPadding(16, 8, 16, 8)
         }
 
         val menuItems = listOf(
-            "🌙 Dark Mode" to { isDarkMode = !isDarkMode; applyTheme() },
-            "☀️ Light Mode" to { isDarkMode = false; applyTheme() },
-            "🔍 Zoom In" to { webView.zoomIn() },
-            "🔎 Zoom Out" to { webView.zoomOut() },
-            "🖥️ Desktop Mode" to { toggleDesktopMode() },
-            "📜 History" to { showMessage("History - Coming soon") },
-            "🔖 Bookmarks" to { showMessage("Bookmarks - Coming soon") },
-            "🍪 Cookies" to { showMessage("Cookies - Coming soon") },
-            "⚙️ Settings" to { showMessage("Settings - Coming soon") },
-            "ℹ️ About" to { showAboutDialog() }
+            "Dark Mode" to { isDarkMode = !isDarkMode; applyTheme() },
+            "Light Mode" to { isDarkMode = false; applyTheme() },
+            "Zoom In" to { webView.zoomIn() },
+            "Zoom Out" to { webView.zoomOut() },
+            "Desktop Mode" to { toggleDesktopMode() },
+            "History" to { showMessage("History - Coming soon") },
+            "Bookmarks" to { showMessage("Bookmarks - Coming soon") },
+            "Cookies" to { showMessage("Cookies - Coming soon") },
+            "Settings" to { showMessage("Settings - Coming soon") },
+            "About" to { showAboutDialog() }
         )
 
         menuItems.forEach { (title, action) ->
@@ -425,24 +414,18 @@ class MainActivity : AppCompatActivity() {
                 text = title
                 textSize = 18f
                 setTextColor(0xFF333333.toInt())
-                setPadding(24, 32, 24, 32)
-                setOnClickListener { action() }
+                setPadding(32, 28, 32, 28)
+            }
+            menuItem.setOnClickListener {
+                action()
             }
             menuLayout.addView(menuItem)
         }
 
-        val popup = PopupWindow(menuLayout, 500, LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
+        val popup = PopupWindow(menuLayout, 450, LinearLayout.LayoutParams.WRAP_CONTENT, true).apply {
             elevation = 16f
             setBackgroundDrawable(ContextCompat.getDrawable(this@MainActivity, android.R.drawable.edit_text))
-            showAtLocation(anchor, Gravity.TOP or Gravity.END, 0, anchor.top - 50)
-            animationStyle = android.R.style.Animation_Dialog
-        }
-
-        for (i in 0 until menuLayout.childCount) {
-            val child = menuLayout.getChildAt(i)
-            child.setOnClickListener {
-                popup.dismiss()
-            }
+            showAtLocation(anchor, Gravity.TOP or Gravity.END, 0, anchor.top - 20)
         }
     }
 
@@ -450,7 +433,6 @@ class MainActivity : AppCompatActivity() {
         val bgColor = if (isDarkMode) 0xFF121212.toInt() else 0xFFF5F5F5.toInt()
         val cardColor = if (isDarkMode) 0xFF1E1E1E.toInt() else 0xFFFFFFFF.toInt()
         val textColor = if (isDarkMode) 0xFFFFFFFF.toInt() else 0xFF333333.toInt()
-        val accentColor = 0xFF2196F3.toInt()
 
         mainContainer.setBackgroundColor(bgColor)
         bottomNav.setBackgroundColor(cardColor)
@@ -462,7 +444,7 @@ class MainActivity : AppCompatActivity() {
         btnHome.setColorFilter(iconColor)
         btnTabs.setColorFilter(iconColor)
         btnMenu.setColorFilter(iconColor)
-        btnRefresh?.setColorFilter(iconColor)
+        btnRefresh.setColorFilter(iconColor)
 
         urlBar.setTextColor(textColor)
         urlBar.setHintTextColor(if (isDarkMode) 0xFF888888.toInt() else 0xFF999999.toInt())
@@ -473,7 +455,7 @@ class MainActivity : AppCompatActivity() {
     private fun toggleDesktopMode() {
         isDesktopMode = !isDesktopMode
         webView.settings.userAgentString = if (isDesktopMode) {
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         } else {
             ""
         }
@@ -510,7 +492,7 @@ class MainActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         when {
-            tabContainer.visibility == View.VISIBLE -> hideTabSlider()
+            tabSliderShown -> hideTabSlider()
             webView.canGoBack() -> webView.goBack()
             else -> super.onBackPressed()
         }
