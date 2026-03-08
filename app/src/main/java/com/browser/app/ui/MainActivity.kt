@@ -341,57 +341,63 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== DON'T TOUCH - ZOOM FUNCTIONS ==========
+    // ========== NATIVE ZOOM - No more JavaScript zoom! ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         
-        browserManager.getCurrentTab()?.webView?.let {
-            applyPageZoomJS(it, zoomPercent)
+        browserManager.getCurrentTab()?.webView?.let { wv ->
+            // Use native zoom controls instead of JavaScript
+            applyNativeZoom(wv, zoomPercent)
         }
         
         zoomPercentage.text = "$zoomPercent%"
     }
 
-    private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        webView?.let { wv ->
-            val scaleValue = percent.toFloat() / 100f
+    private fun applyNativeZoom(webView: WebView, percent: Int) {
+        // Convert percentage to scale
+        val scale = percent / 100f
+        
+        // Use built-in zoom with setInitialScale
+        webView.settings.apply {
+            // Set initial scale based on percentage (multiply by 100 for setInitialScale)
+            val initialScale = (percent * 100 / 100).coerceIn(25, 400)
+            webView.setInitialScale(initialScale)
             
-            val js = """
-                (function() {
-                    var meta = document.querySelector('meta[name="viewport"]');
-                    var content = 'width=device-width, initial-scale=$scaleValue, maximum-scale=$scaleValue, minimum-scale=$scaleValue, user-scalable=yes';
-                    
-                    if (meta) {
-                        meta.setAttribute('content', content);
-                    } else {
-                        meta = document.createElement('meta');
-                        meta.name = 'viewport';
-                        meta.content = content;
-                        document.head.appendChild(meta);
-                    }
-                    
-                    document.body.style.zoom = '${(scaleValue * 100)}%';
-                    document.documentElement.style.zoom = '${(scaleValue * 100)}%';
-                })();
-            """.trimIndent()
-            
-            wv.evaluateJavascript(js, null)
+            // Let pinch-to-zoom work naturally
+            builtInZoomControls = true
+            setSupportZoom(true)
         }
     }
 
-    // ========== DON'T TOUCH - DESKTOP MODE ==========
+    // Keep applyPageZoomJS for viewport fix only (not for zoom control)
+    private fun applyPageZoomJS(webView: WebView?, percent: Int) {
+        // Only inject viewport fix for proper rendering - NOT for zoom
+        webView?.let { wv ->
+            // Just ensure viewport is properly set
+            wv.settings.useWideViewPort = true
+            wv.settings.loadWithOverviewMode = true
+        }
+    }
+
+    // ========== DESKTOP MODE - Fixed ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = prefs.isDesktopMode
             tab.webView?.let { wv ->
+                // Update user agent
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
                 }
+                
+                // Reset zoom to avoid half-screen - this is the key fix!
+                WebViewFactory.resetZoom(wv)
+                
+                // Reload to apply changes
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 }

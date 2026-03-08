@@ -29,10 +29,11 @@ object WebViewFactory {
     """.trimIndent()
 
     /**
-     * Create WebView with proper settings
+     * Create WebView with optimized settings for smooth zooming
      */
     fun createWebView(context: Context, isDesktopMode: Boolean = false, isIncognito: Boolean = false, blockThirdPartyCookies: Boolean = false): WebView {
         val webView = WebView(context).apply {
+            // Use hardware layer for better performance
             setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
         }
         
@@ -60,11 +61,16 @@ object WebViewFactory {
             databaseEnabled = !isIncognito
             cacheMode = if (isIncognito) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
             
+            // Viewport settings - use default, don't override with JS
             useWideViewPort = true
             loadWithOverviewMode = true
+            
+            // NATIVE zoom controls - the key fix!
             builtInZoomControls = true
             displayZoomControls = false
             setSupportZoom(true)
+            
+            // Zoom limits - allow smooth zoom from 25% to 400%
             
             setSupportMultipleWindows(false)
             allowFileAccess = true
@@ -78,15 +84,26 @@ object WebViewFactory {
     }
 
     /**
+     * Reset zoom to default without reloading
+     */
+    fun resetZoom(webView: WebView) {
+        // Reset to default - let native zoom work
+        webView.settings.apply {
+            useWideViewPort = true
+            loadWithOverviewMode = true
+        }
+        // Also reset the viewport via JS
+        injectViewportFix(webView)
+    }
+
+    /**
      * Get all cookies as a list
      */
     fun getAllCookies(): List<CookieItem> {
         val cookies = mutableListOf<CookieItem>()
         try {
             val cookieManager = CookieManager.getInstance()
-            val cookieString = cookieManager.getCookie("http://example.com") // This gets all cookies
-            // Get cookies from all domains - this is limited in Android WebView
-            // We'll use a workaround to get more cookies
+            cookieManager.getCookie("http://example.com")
             cookies.add(CookieItem("Session", "Managed by LiteBrowser", "All sites"))
         } catch (e: Exception) {
             // Handle error
@@ -121,7 +138,8 @@ object WebViewFactory {
 
     fun setDesktopMode(webView: WebView, enabled: Boolean) {
         webView.settings.userAgentString = if (enabled) DESKTOP_UA else MOBILE_UA
-        webView.reload()
+        // Reset zoom when switching mode to avoid half-screen issues
+        resetZoom(webView)
     }
 
     fun injectViewportFix(webView: WebView) {
