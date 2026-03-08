@@ -7,10 +7,9 @@ import android.webkit.WebView
 
 object WebViewFactory {
     
-    private const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    private const val MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    const val DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    const val MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
-    // JavaScript to neutralize hostile viewport meta tags (Layer 2)
     val VIEWPORT_FIX_JS = """
         (function() {
             var metas = document.querySelectorAll('meta[name="viewport"]');
@@ -29,14 +28,11 @@ object WebViewFactory {
         })();
     """.trimIndent()
 
-    // Get system font scale for accessibility (Layer 3)
-    // fontScale values: 0.85 (small) | 1.0 (normal) | 1.15 (large) | 1.3 (huge)
     fun getSystemFontScale(context: Context): Int {
         val scale = context.resources.configuration.fontScale
         return (scale * 100).toInt()
     }
 
-    // Get default text zoom - prefers system font scale if available
     fun getDefaultTextZoom(context: Context, savedZoom: Int): Int {
         return if (savedZoom > 0) savedZoom else getSystemFontScale(context)
     }
@@ -52,18 +48,16 @@ object WebViewFactory {
             databaseEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
             
-            // Layer 1: Native zoom engine
             useWideViewPort = true
             loadWithOverviewMode = true
             builtInZoomControls = true
-            displayZoomControls = false  // Use custom buttons
+            displayZoomControls = false
             setSupportZoom(true)
             
             setSupportMultipleWindows(false)
             allowFileAccess = true
             allowContentAccess = true
             
-            // Set user agent based on desktop mode preference
             userAgentString = if (isDesktopMode) DESKTOP_UA else MOBILE_UA
         }
         
@@ -73,15 +67,6 @@ object WebViewFactory {
     fun setDesktopMode(webView: WebView, enabled: Boolean) {
         webView.settings.userAgentString = if (enabled) DESKTOP_UA else MOBILE_UA
         webView.reload()
-    }
-
-    fun setDesktopModeNoReload(webView: WebView, enabled: Boolean) {
-        val currentUrl = webView.url
-        webView.settings.userAgentString = if (enabled) DESKTOP_UA else MOBILE_UA
-        // Reload only if there's a URL loaded
-        if (!currentUrl.isNullOrEmpty()) {
-            webView.reload()
-        }
     }
 
     fun injectViewportFix(webView: WebView) {

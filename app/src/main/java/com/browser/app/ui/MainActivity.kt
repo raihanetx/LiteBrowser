@@ -7,7 +7,6 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.KeyEvent
-import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebChromeClient
@@ -68,7 +67,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupListeners()
         
-        // Try to restore saved tabs, otherwise create new tab
         if (!restoreTabs()) {
             createNewTab()
         }
@@ -97,13 +95,11 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawers()
         }
         
-        // Desktop Mode toggle
         menuDesktop.setOnClickListener { 
             toggleDesktopMode()
             drawerLayout.closeDrawers()
         }
         
-        // Zoom SeekBar listener
         zoomSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -154,8 +150,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createNewTab(loadUrlNow: Boolean = true) {
-        val currentTab = browserManager.getCurrentTab()
-        val isDesktopMode = currentTab?.isDesktopMode ?: prefs.getBoolean(KEY_DESKTOP_MODE, false)
+        val isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
         
         val tab = browserManager.createNewTab().apply {
             this.isDesktopMode = isDesktopMode
@@ -180,12 +175,10 @@ class MainActivity : AppCompatActivity() {
                     this.title = view?.title ?: "New Tab"
                 }
                 
-                // Inject viewport fix to neutralize hostile meta tags
                 view?.let { WebViewFactory.injectViewportFix(it) }
                 
-                // Apply saved page zoom
                 val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-                applyPageZoomSilent(view, savedZoom)
+                applyPageZoomJS(view, savedZoom)
                 
                 if (tabSlider.isVisible) updateTabSlider()
                 updateMenuState()
@@ -201,10 +194,6 @@ class MainActivity : AppCompatActivity() {
         
         webViewContainer.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         
-        // Apply saved page zoom
-        val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-        applyPageZoomSilent(webView, savedZoom)
-        
         showTab(tab.id)
         
         if (loadUrlNow) {
@@ -216,7 +205,6 @@ class MainActivity : AppCompatActivity() {
         browserManager.setCurrentTab(tabId)
         tabSlider.isVisible = false
         
-        // Show/hide WebViews - no reload, just visibility change
         for (i in 0 until webViewContainer.childCount) {
             webViewContainer.getChildAt(i).isVisible = webViewContainer.getChildAt(i).tag == tabId
         }
@@ -224,11 +212,8 @@ class MainActivity : AppCompatActivity() {
         browserManager.getCurrentTab()?.let { tab ->
             urlEditText.setText(tab.url)
             tab.webView?.let { wv ->
-                // Ensure desktop mode is applied
-                WebViewFactory.setDesktopModeNoReload(wv, tab.isDesktopMode)
-                // Apply current page zoom
                 val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-                applyPageZoomSilent(wv, savedZoom)
+                applyPageZoomJS(wv, savedZoom)
             }
         }
         
@@ -238,11 +223,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateMenuState() {
         val tab = browserManager.getCurrentTab()
+        val isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
         
-        // Update desktop mode indicator
-        menuDesktop.text = if (tab?.isDesktopMode == true) "Desktop Mode ✓" else "Desktop Mode"
+        menuDesktop.text = if (tab?.isDesktopMode == true || isDesktopMode) "Desktop Mode ✓" else "Desktop Mode"
         
-        // Update zoom slider
         val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
         zoomSeekBar.progress = savedZoom
         zoomPercentage.text = "$savedZoom%"
@@ -257,7 +241,6 @@ class MainActivity : AppCompatActivity() {
         }
         browserManager.closeTab(tabId)
         
-        // Save tabs after closing
         saveTabs()
         
         browserManager.getCurrentTab()?.let { 
@@ -283,52 +266,67 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // Page Zoom - scales entire page (real browser zoom)
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.edit().putInt(KEY_PAGE_ZOOM, zoomPercent).apply()
         
         browserManager.getCurrentTab()?.webView?.let { wv ->
-            applyPageZoomSilent(wv, zoomPercent)
+            applyPageZoomJS(wv, zoomPercent)
         }
         
         zoomPercentage.text = "$zoomPercent%"
     }
 
-    private fun applyPageZoomSilent(webView: WebView?, percent: Int) {
+    private fun applyPageZoomJS(webView: WebView?, percent: Int) {
         webView?.let { wv ->
-            // Use setInitialScale for proper page scaling
-            val scalePercent = percent.toFloat() / 100f
-            wv.settings.setSupportZoom(true)
-            wv.settings.builtInZoomControls = true
-            wv.settings.displayZoomControls = false
+            val scaleValue = percent.toFloat() / 100f
             
-            // Set initial scale - this scales the entire page
-            wv.setInitialScale((scalePercent * 100).toInt())
+            val js = """
+                (function() {
+                    var meta = document.querySelector('meta[name="viewport"]');
+                    var content = 'width=device-width, initial-scale=$scaleValue, maximum-scale=$scaleValue, minimum-scale=$scaleValue, user-scalable=yes';
+                    
+                    if (meta) {
+                        meta.setAttribute('content', content);
+                    } else {
+                        meta = document.createElement('meta');
+                        meta.name = 'viewport';
+                        meta.content = content;
+                        document.head.appendChild(meta);
+                    }
+                    
+                    document.body.style.zoom = '${(scaleValue * 100)}%';
+                    document.documentElement.style.zoom = '${(scaleValue * 100)}%';
+                })();
+            """.trimIndent()
+            
+            wv.evaluateJavascript(js, null)
         }
     }
 
     private fun toggleDesktopMode() {
-        browserManager.getCurrentTab()?.let { tab ->
-            tab.isDesktopMode = !tab.isDesktopMode
-            // Save to preferences for persistence
-            prefs.edit().putBoolean(KEY_DESKTOP_MODE, tab.isDesktopMode).apply()
-            
+        val currentMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
+        val newMode = !currentMode
+        prefs.edit().putBoolean(KEY_DESKTOP_MODE, newMode).apply()
+        
+        browserManager.getAllTabs().forEach { tab ->
+            tab.isDesktopMode = newMode
             tab.webView?.let { wv ->
-                WebViewFactory.setDesktopMode(wv, tab.isDesktopMode)
+                wv.settings.userAgentString = if (newMode) {
+                    WebViewFactory.DESKTOP_UA
+                } else {
+                    WebViewFactory.MOBILE_UA
+                }
+                if (!wv.url.isNullOrEmpty()) {
+                    wv.reload()
+                }
             }
-            
-            // Apply to all tabs for consistency
-            browserManager.getAllTabs().forEach { t ->
-                t.isDesktopMode = tab.isDesktopMode
-            }
-            
-            // Save tabs
-            saveTabs()
-            
-            updateMenuState()
-            showToast(if (tab.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
         }
+        
+        saveTabs()
+        
+        updateMenuState()
+        showToast(if (newMode) "Desktop Mode ON" else "Desktop Mode OFF")
     }
 
     private fun showToast(message: String) {
@@ -342,7 +340,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Tab persistence - save tabs to SharedPreferences
     private fun saveTabs() {
         val tabsArray = JSONArray()
         var currentTabId = -1
@@ -365,12 +362,9 @@ class MainActivity : AppCompatActivity() {
         prefs.edit()
             .putString(KEY_TABS, tabsArray.toString())
             .putInt(KEY_CURRENT_TAB, currentTabId)
-            .putBoolean(KEY_DESKTOP_MODE, browserManager.getCurrentTab()?.isDesktopMode ?: false)
-            .putInt(KEY_PAGE_ZOOM, prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT))
             .apply()
     }
 
-    // Restore tabs from SharedPreferences
     @SuppressLint("SetJavaScriptEnabled")
     private fun restoreTabs(): Boolean {
         val savedTabsJson = prefs.getString(KEY_TABS, null) ?: return false
@@ -381,7 +375,6 @@ class MainActivity : AppCompatActivity() {
             val tabsArray = JSONArray(savedTabsJson)
             if (tabsArray.length() == 0) return false
             
-            // Clear current WebViews
             webViewContainer.removeAllViews()
             browserManager.clearAllTabs()
             
@@ -401,7 +394,6 @@ class MainActivity : AppCompatActivity() {
                     isSelected = isSelected
                 )
                 
-                // Recreate WebView
                 val webView = WebViewFactory.createWebView(this, tabDesktopMode).apply { tag = tab.id }
                 tab.webView = webView
                 
@@ -423,7 +415,7 @@ class MainActivity : AppCompatActivity() {
                         view?.let { WebViewFactory.injectViewportFix(it) }
                         
                         val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-                        applyPageZoomSilent(view, savedZoom)
+                        applyPageZoomJS(view, savedZoom)
                         
                         if (tabSlider.isVisible) updateTabSlider()
                         updateMenuState()
@@ -441,20 +433,14 @@ class MainActivity : AppCompatActivity() {
                 browserManager.addTab(tab)
             }
             
-            // Show the saved current tab
             val currentTab = if (savedCurrentTabId >= 0) browserManager.getTab(savedCurrentTabId) else browserManager.getCurrentTab()
             currentTab?.let { showTab(it.id) }
             
-            // Load URL if tab has saved URL
             currentTab?.let { tab ->
                 if (tab.url.isNotEmpty()) {
                     tab.webView?.loadUrl(tab.url)
                 }
             }
-            
-            // Apply saved page zoom
-            val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-            currentTab?.webView?.let { applyPageZoomSilent(it, savedZoom) }
             
             updateMenuState()
             true
@@ -490,12 +476,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Save tabs when app goes to background
         saveTabs()
     }
 
     override fun onDestroy() {
-        // Save tabs before destroying
         saveTabs()
         browserManager.getAllTabs().forEach { it.webView?.destroy() }
         super.onDestroy()
