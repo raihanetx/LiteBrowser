@@ -70,17 +70,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                Surface(color = Gray50, modifier = Modifier.fillMaxSize()) {
-                    BrowserApp()
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(ComposeColor(0xFFF5F5F5))
+            ) {
+                BrowserAppContent()
             }
         }
     }
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        // Handled in composable
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -88,9 +89,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowserApp() {
+fun BrowserAppContent() {
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
