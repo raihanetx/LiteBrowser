@@ -9,5 +9,6 @@ data class BrowserTab(
     var webView: WebView? = null,
     var isSelected: Boolean = false,
     var zoomLevel: Float = 1.0f,
-    var isDesktopMode: Boolean = false
+    var isDesktopMode: Boolean = false,
+    var isIncognito: Boolean = false
 )

@@ -229,6 +229,26 @@
             android:paddingHorizontal="8dp"
             android:background="?attr/selectableItemBackground" />
 
+        <TextView
+            android:id="@+id/menuIncognito"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Incognito Mode"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:background="?attr/selectableItemBackground" />
+
+        <TextView
+            android:id="@+id/menuClearData"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Clear Data"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:background="?attr/selectableItemBackground" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
