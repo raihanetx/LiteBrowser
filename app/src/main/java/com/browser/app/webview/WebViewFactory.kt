@@ -75,6 +75,15 @@ object WebViewFactory {
         webView.reload()
     }
 
+    fun setDesktopModeNoReload(webView: WebView, enabled: Boolean) {
+        val currentUrl = webView.url
+        webView.settings.userAgentString = if (enabled) DESKTOP_UA else MOBILE_UA
+        // Reload only if there's a URL loaded
+        if (!currentUrl.isNullOrEmpty()) {
+            webView.reload()
+        }
+    }
+
     fun injectViewportFix(webView: WebView) {
         webView.evaluateJavascript(VIEWPORT_FIX_JS, null)
     }

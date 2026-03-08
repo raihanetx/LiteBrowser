@@ -13,6 +13,21 @@ class BrowserManager {
         return tabs.last()
     }
 
+    fun addTab(tab: BrowserTab) {
+        if (tab.id >= tabIdCounter) {
+            tabIdCounter = tab.id + 1
+        }
+        tabs.add(tab)
+        if (currentTabId < 0) {
+            currentTabId = tab.id
+        }
+    }
+
+    fun clearAllTabs() {
+        tabs.clear()
+        currentTabId = -1
+    }
+
     fun getTab(id: Int) = tabs.find { it.id == id }
     fun getCurrentTab() = tabs.find { it.id == currentTabId }
     fun getAllTabs() = tabs.toList()
