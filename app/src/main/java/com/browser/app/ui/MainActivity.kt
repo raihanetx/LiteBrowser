@@ -153,8 +153,13 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun createNewTab() {
-        val tab = browserManager.createNewTab()
-        val webView = WebViewFactory.createWebView(this).apply { tag = tab.id }
+        val currentTab = browserManager.getCurrentTab()
+        val isDesktopMode = currentTab?.isDesktopMode ?: false
+        
+        val tab = browserManager.createNewTab().apply {
+            this.isDesktopMode = isDesktopMode
+        }
+        val webView = WebViewFactory.createWebView(this, isDesktopMode).apply { tag = tab.id }
         tab.webView = webView
         
         webView.webViewClient = object : WebViewClient() {

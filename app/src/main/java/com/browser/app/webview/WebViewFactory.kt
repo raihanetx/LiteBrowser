@@ -23,7 +23,7 @@ object WebViewFactory {
             if (metas.length === 0) {
                 var m = document.createElement('meta');
                 m.name = 'viewport';
-                m.content = 'initial-scale=1width=device-width,.0,maximum-scale=5.0,user-scalable=yes';
+                m.content = 'width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes';
                 document.head.appendChild(m);
             }
         })();
@@ -41,7 +41,7 @@ object WebViewFactory {
         return if (savedZoom > 0) savedZoom else getSystemFontScale(context)
     }
     
-    fun createWebView(context: Context): WebView {
+    fun createWebView(context: Context, isDesktopMode: Boolean = false): WebView {
         val webView = WebView(context).apply {
             setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
         }
@@ -62,6 +62,9 @@ object WebViewFactory {
             setSupportMultipleWindows(false)
             allowFileAccess = true
             allowContentAccess = true
+            
+            // Set user agent based on desktop mode preference
+            userAgentString = if (isDesktopMode) DESKTOP_UA else MOBILE_UA
         }
         
         return webView
