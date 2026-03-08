@@ -8,6 +8,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
+        android:name=".BrowserApp"
         android:allowBackup="true"
         android:label="LiteBrowser"
         android:hardwareAccelerated="true"

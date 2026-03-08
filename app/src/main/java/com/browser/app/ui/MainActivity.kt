@@ -2,8 +2,6 @@ package com.browser.app.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.DialogInterface
-import android.content.SharedPreferences
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
@@ -28,31 +26,28 @@ import androidx.core.view.GravityCompat
 import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import com.browser.app.R
-import com.browser.app.download.DownloadManagerHelper
-import com.browser.app.download.SimpleDownloadListener
 import com.browser.app.model.BrowserManager
 import com.browser.app.model.BrowserTab
+import com.browser.app.utils.BrowserPreferences
+import com.browser.app.utils.DownloadUtils
 import com.browser.app.webview.WebViewFactory
-import org.json.JSONArray
-import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
+    // ========== Constants (ZOOM - DON'T TOUCH) ==========
     companion object {
-        private const val PREFS_NAME = "browser_prefs"
-        private const val KEY_TABS = "saved_tabs"
-        private const val KEY_CURRENT_TAB = "current_tab_id"
-        private const val KEY_DESKTOP_MODE = "desktop_mode"
-        private const val KEY_PAGE_ZOOM = "page_zoom_percent"
-        private const val KEY_INCOGNITO_MODE = "incognito_mode"
         private const val ZOOM_MIN = 50
         private const val ZOOM_MAX = 150
         private const val ZOOM_DEFAULT = 100
     }
 
+    // ========== Smart Preferences ==========
+    private lateinit var prefs: BrowserPreferences
+
+    // ========== Browser Manager ==========
     private val browserManager = BrowserManager()
-    private lateinit var prefs: SharedPreferences
-    
+
+    // ========== Views ==========
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var urlEditText: EditText
     private lateinit var progressBar: ProgressBar
@@ -65,23 +60,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var zoomSeekBar: SeekBar
     private lateinit var zoomPercentage: TextView
 
+    // ========== Lifecycle ==========
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
-        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        
-        // Initialize cookie manager for persistent cookies
-        WebViewFactory.initCookieManager()
+        // Smart initialization - use preferences manager
+        prefs = BrowserPreferences(this)
         
         initViews()
         setupListeners()
         
-        if (!restoreTabs()) {
+        if (!restoreTabsSmart()) {
             createNewTab()
         }
     }
 
+    // ========== Initialization ==========
     private fun initViews() {
         drawerLayout = findViewById(R.id.drawerLayout)
         urlEditText = findViewById(R.id.urlEditText)
@@ -107,23 +102,25 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawers()
         }
         
+        // Desktop Mode toggle - DON'T TOUCH
         menuDesktop.setOnClickListener { 
             toggleDesktopMode()
             drawerLayout.closeDrawers()
         }
 
-        // Incognito Mode toggle
+        // Incognito Mode - SMART
         menuIncognito.setOnClickListener {
-            toggleIncognitoMode()
+            toggleIncognitoModeSmart()
             drawerLayout.closeDrawers()
         }
 
-        // Clear Data
+        // Clear Data - SMART
         menuClearData.setOnClickListener {
             showClearDataDialog()
             drawerLayout.closeDrawers()
         }
         
+        // Zoom SeekBar - DON'T TOUCH
         zoomSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
@@ -147,6 +144,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ========== Tab Management ==========
     private fun toggleTabSlider() {
         tabSlider.isVisible = !tabSlider.isVisible
         if (tabSlider.isVisible) updateTabSlider()
@@ -172,10 +170,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ========== Create Tab - DON'T TOUCH ZOOM/DESKTOP ==========
     @SuppressLint("SetJavaScriptEnabled")
     private fun createNewTab(loadUrlNow: Boolean = true) {
-        val isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
-        val isIncognito = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
+        val isDesktopMode = prefs.isDesktopMode
+        val isIncognito = prefs.isIncognitoMode
         
         val tab = browserManager.createNewTab().apply {
             this.isDesktopMode = isDesktopMode
@@ -186,8 +185,11 @@ class MainActivity : AppCompatActivity() {
 
         val webView = WebViewFactory.createWebView(this, isDesktopMode, isIncognito).apply { tag = tab.id }
         
-        // Set download listener
-        webView.setDownloadListener(SimpleDownloadListener(this))
+        // SMART: Set download listener
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
+            val success = DownloadUtils.download(this, url, userAgent)
+            Toast.makeText(this, if (success) "Download started" else "Download failed", Toast.LENGTH_SHORT).show()
+        }
         
         tab.webView = webView
         
@@ -208,7 +210,8 @@ class MainActivity : AppCompatActivity() {
                 
                 view?.let { WebViewFactory.injectViewportFix(it) }
                 
-                val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
+                // DON'T TOUCH - ZOOM
+                val savedZoom = prefs.pageZoom
                 applyPageZoomJS(view, savedZoom)
                 
                 if (tabSlider.isVisible) updateTabSlider()
@@ -232,6 +235,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ========== Show Tab - DON'T TOUCH ==========
     private fun showTab(tabId: Int) {
         browserManager.setCurrentTab(tabId)
         tabSlider.isVisible = false
@@ -242,9 +246,9 @@ class MainActivity : AppCompatActivity() {
         
         browserManager.getCurrentTab()?.let { tab ->
             urlEditText.setText(tab.url)
-            tab.webView?.let { wv ->
-                val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-                applyPageZoomJS(wv, savedZoom)
+            tab.webView?.let { 
+                // DON'T TOUCH - ZOOM
+                applyPageZoomJS(it, prefs.pageZoom)
             }
         }
         
@@ -252,36 +256,32 @@ class MainActivity : AppCompatActivity() {
         hideKeyboard()
     }
 
+    // ========== Update Menu State ==========
     private fun updateMenuState() {
-        val isDesktopMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
-        val isIncognito = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
+        // DON'T TOUCH - Desktop Mode
+        menuDesktop.text = if (prefs.isDesktopMode) "Desktop Mode ✓" else "Desktop Mode"
         
-        menuDesktop.text = if (isDesktopMode) "Desktop Mode ✓" else "Desktop Mode"
-        menuIncognito.text = if (isIncognito) "Incognito Mode ✓" else "Incognito Mode"
+        // SMART - Incognito
+        menuIncognito.text = if (prefs.isIncognitoMode) "Incognito Mode ✓" else "Incognito Mode"
         
-        val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-        zoomSeekBar.progress = savedZoom
-        zoomPercentage.text = "$savedZoom%"
+        // DON'T TOUCH - Zoom
+        zoomSeekBar.progress = prefs.pageZoom
+        zoomPercentage.text = "${prefs.pageZoom}%"
     }
 
+    // ========== Close Tab ==========
     private fun closeTab(tabId: Int) {
         val tab = browserManager.getTab(tabId)
-        val webView = tab?.webView
-        webView?.let {
-            webViewContainer.removeView(it)
-            it.destroy()
-        }
+        webViewContainer.removeView(tab?.webView)
+        tab?.webView?.destroy()
+        
         browserManager.closeTab(tabId)
+        saveTabsSmart()
         
-        saveTabs()
-        
-        browserManager.getCurrentTab()?.let { 
-            showTab(it.id) 
-        } ?: run {
-            createNewTab()
-        }
+        browserManager.getCurrentTab()?.let { showTab(it.id) } ?: createNewTab()
     }
 
+    // ========== Load URL ==========
     private fun loadUrl(input: String) {
         hideKeyboard()
         
@@ -292,18 +292,22 @@ class MainActivity : AppCompatActivity() {
                 else -> "https://lite.duckduckgo.com/lite/?q=$it"
             }
         }
-        browserManager.getCurrentTab()?.webView?.loadUrl(url)
-        browserManager.getCurrentTab()?.url = url
+        
+        browserManager.getCurrentTab()?.apply {
+            webView?.loadUrl(url)
+            this.url = url
+        }
         urlEditText.setText(url)
         tabSlider.isVisible = false
     }
 
+    // ========== DON'T TOUCH - ZOOM FUNCTIONS ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
-        prefs.edit().putInt(KEY_PAGE_ZOOM, zoomPercent).apply()
+        prefs.pageZoom = zoomPercent
         
-        browserManager.getCurrentTab()?.webView?.let { wv ->
-            applyPageZoomJS(wv, zoomPercent)
+        browserManager.getCurrentTab()?.webView?.let {
+            applyPageZoomJS(it, zoomPercent)
         }
         
         zoomPercentage.text = "$zoomPercent%"
@@ -336,15 +340,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ========== DON'T TOUCH - DESKTOP MODE ==========
     private fun toggleDesktopMode() {
-        val currentMode = prefs.getBoolean(KEY_DESKTOP_MODE, false)
-        val newMode = !currentMode
-        prefs.edit().putBoolean(KEY_DESKTOP_MODE, newMode).apply()
+        prefs.isDesktopMode = !prefs.isDesktopMode
         
         browserManager.getAllTabs().forEach { tab ->
-            tab.isDesktopMode = newMode
+            tab.isDesktopMode = prefs.isDesktopMode
             tab.webView?.let { wv ->
-                wv.settings.userAgentString = if (newMode) {
+                wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
@@ -355,37 +358,31 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        saveTabs()
-        
+        saveTabsSmart()
         updateMenuState()
-        showToast(if (newMode) "Desktop Mode ON" else "Desktop Mode OFF")
+        showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
     }
 
-    // Toggle Incognito Mode
-    private fun toggleIncognitoMode() {
-        val currentMode = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
-        val newMode = !currentMode
-        prefs.edit().putBoolean(KEY_INCOGNITO_MODE, newMode).apply()
+    // ========== SMART - Incognito Mode ==========
+    private fun toggleIncognitoModeSmart() {
+        prefs.isIncognitoMode = !prefs.isIncognitoMode
         
-        if (newMode) {
-            // Clear all cookies and cache when entering incognito
+        if (prefs.isIncognitoMode) {
+            // Clear all data when entering incognito
             WebViewFactory.clearAllCookies()
             browserManager.getAllTabs().forEach { tab ->
-                tab.webView?.let { wv ->
-                    wv.clearCache(true)
-                    wv.clearHistory()
-                    wv.clearFormData()
-                }
+                tab.webView?.clearCache(true)
+                tab.webView?.clearHistory()
+                tab.webView?.clearFormData()
             }
-            showToast("Incognito Mode ON - History cleared")
+            showToast("Incognito Mode ON")
         }
         
-        // Create new tabs with incognito setting
+        // Reload all tabs
         browserManager.getAllTabs().forEach { tab ->
-            tab.isIncognito = newMode
+            tab.isIncognito = prefs.isIncognitoMode
             tab.webView?.let { wv ->
-                wv.settings.saveFormData = !newMode
-                wv.settings.cacheMode = if (newMode) {
+                wv.settings.cacheMode = if (prefs.isIncognitoMode) {
                     android.webkit.WebSettings.LOAD_NO_CACHE
                 } else {
                     android.webkit.WebSettings.LOAD_DEFAULT
@@ -396,15 +393,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        saveTabs()
+        saveTabsSmart()
         updateMenuState()
         
-        if (!newMode) {
+        if (!prefs.isIncognitoMode) {
             showToast("Incognito Mode OFF")
         }
     }
 
-    // Show Clear Data Dialog
+    // ========== SMART - Clear Data ==========
     private fun showClearDataDialog() {
         val options = arrayOf("Clear Cookies", "Clear Cache", "Clear History", "Clear All Data")
         
@@ -412,61 +409,138 @@ class MainActivity : AppCompatActivity() {
             .setTitle("Clear Data")
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> clearCookies()
-                    1 -> clearCache()
-                    2 -> clearHistory()
-                    3 -> clearAllData()
+                    0 -> clearCookiesSmart()
+                    1 -> clearCacheSmart()
+                    2 -> clearHistorySmart()
+                    3 -> clearAllDataSmart()
                 }
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun clearCookies() {
+    private fun clearCookiesSmart() {
         WebViewFactory.clearAllCookies()
         showToast("Cookies cleared")
     }
 
-    private fun clearCache() {
-        browserManager.getAllTabs().forEach { tab ->
-            tab.webView?.let { wv ->
-                wv.clearCache(true)
-            }
-        }
+    private fun clearCacheSmart() {
+        browserManager.getAllTabs().forEach { it.webView?.clearCache(true) }
         showToast("Cache cleared")
     }
 
-    private fun clearHistory() {
-        browserManager.getAllTabs().forEach { tab ->
-            tab.webView?.let { wv ->
-                wv.clearHistory()
-            }
-        }
+    private fun clearHistorySmart() {
+        browserManager.getAllTabs().forEach { it.webView?.clearHistory() }
         showToast("History cleared")
     }
 
-    private fun clearAllData() {
-        // Clear cookies
+    private fun clearAllDataSmart() {
         WebViewFactory.clearAllCookies()
-        
-        // Clear cache, history, form data for all tabs
         browserManager.getAllTabs().forEach { tab ->
-            tab.webView?.let { wv ->
-                wv.clearCache(true)
-                wv.clearHistory()
-                wv.clearFormData()
+            tab.webView?.let {
+                it.clearCache(true)
+                it.clearHistory()
+                it.clearFormData()
             }
         }
-        
-        // Clear saved tabs
-        prefs.edit().remove(KEY_TABS).apply()
-        
+        prefs.clearAllData()
         showToast("All data cleared")
-        
-        // Reload current page
         browserManager.getCurrentTab()?.webView?.reload()
     }
 
+    // ========== SMART - Tab Persistence ==========
+    private fun saveTabsSmart() {
+        if (prefs.isIncognitoMode) return
+        
+        val tabs = browserManager.getAllTabs().map { tab ->
+            BrowserPreferences.TabData(
+                id = tab.id,
+                url = tab.url,
+                title = tab.title,
+                isDesktopMode = tab.isDesktopMode,
+                isSelected = tab.isSelected
+            )
+        }
+        
+        val currentId = browserManager.getCurrentTab()?.id ?: -1
+        prefs.saveTabs(tabs, currentId)
+    }
+
+    private fun restoreTabsSmart(): Boolean {
+        if (prefs.isIncognitoMode) return false
+        
+        val savedTabs = prefs.restoreTabs() ?: return false
+        val savedCurrentTabId = prefs.getSavedCurrentTabId()
+        
+        webViewContainer.removeAllViews()
+        browserManager.clearAllTabs()
+        
+        savedTabs.forEach { tabData ->
+            val tab = BrowserTab(
+                id = tabData.id,
+                url = tabData.url,
+                title = tabData.title,
+                isDesktopMode = tabData.isDesktopMode,
+                isSelected = tabData.isSelected,
+                isIncognito = prefs.isIncognitoMode
+            )
+            
+            val webView = WebViewFactory.createWebView(this, tab.isDesktopMode, tab.isIncognito).apply { tag = tab.id }
+            
+            webView.setDownloadListener { url, userAgent, _, _, _ ->
+                val success = DownloadUtils.download(this, url, userAgent)
+                Toast.makeText(this, if (success) "Download started" else "Download failed", Toast.LENGTH_SHORT).show()
+            }
+            
+            tab.webView = webView
+            
+            webView.webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    progressBar.isVisible = true
+                    urlEditText.setText(url ?: "")
+                }
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    progressBar.isVisible = false
+                    browserManager.getCurrentTab()?.apply {
+                        this.url = url ?: ""
+                        this.title = view?.title ?: "New Tab"
+                    }
+                    
+                    view?.let { WebViewFactory.injectViewportFix(it) }
+                    applyPageZoomJS(view, prefs.pageZoom)
+                    
+                    if (tabSlider.isVisible) updateTabSlider()
+                    updateMenuState()
+                }
+            }
+
+            webView.webChromeClient = object : WebChromeClient() {
+                override fun onProgressChanged(view: WebView?, progress: Int) {
+                    progressBar.progress = progress
+                    progressBar.isVisible = progress < 100
+                }
+            }
+            
+            webViewContainer.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            browserManager.addTab(tab)
+        }
+        
+        val currentTab = if (savedCurrentTabId >= 0) browserManager.getTab(savedCurrentTabId) else browserManager.getCurrentTab()
+        currentTab?.let { 
+            showTab(it.id) 
+            if (it.url.isNotEmpty()) {
+                it.webView?.loadUrl(it.url)
+            }
+        }
+        
+        updateMenuState()
+        return true
+    }
+
+    // ========== Utilities ==========
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
@@ -478,128 +552,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveTabs() {
-        // Don't save tabs in incognito mode
-        if (prefs.getBoolean(KEY_INCOGNITO_MODE, false)) {
-            return
-        }
-        
-        val tabsArray = JSONArray()
-        var currentTabId = -1
-        
-        browserManager.getAllTabs().forEach { tab ->
-            val tabObj = JSONObject().apply {
-                put("id", tab.id)
-                put("url", tab.url)
-                put("title", tab.title)
-                put("isDesktopMode", tab.isDesktopMode)
-                put("isSelected", tab.isSelected)
-            }
-            tabsArray.put(tabObj)
-            
-            if (tab.isSelected) {
-                currentTabId = tab.id
-            }
-        }
-        
-        prefs.edit()
-            .putString(KEY_TABS, tabsArray.toString())
-            .putInt(KEY_CURRENT_TAB, currentTabId)
-            .apply()
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun restoreTabs(): Boolean {
-        // Don't restore tabs if in incognito mode
-        if (prefs.getBoolean(KEY_INCOGNITO_MODE, false)) {
-            return false
-        }
-        
-        val savedTabsJson = prefs.getString(KEY_TABS, null) ?: return false
-        val savedCurrentTabId = prefs.getInt(KEY_CURRENT_TAB, 0)
-        
-        return try {
-            val tabsArray = JSONArray(savedTabsJson)
-            if (tabsArray.length() == 0) return false
-            
-            webViewContainer.removeAllViews()
-            browserManager.clearAllTabs()
-            
-            for (i in 0 until tabsArray.length()) {
-                val tabObj = tabsArray.getJSONObject(i)
-                val tabId = tabObj.getInt("id")
-                val url = tabObj.optString("url", "")
-                val title = tabObj.optString("title", "New Tab")
-                val tabDesktopMode = tabObj.optBoolean("isDesktopMode", false)
-                val isSelected = tabObj.optBoolean("isSelected", false)
-                val isIncognito = prefs.getBoolean(KEY_INCOGNITO_MODE, false)
-                
-                val tab = BrowserTab(
-                    id = tabId,
-                    url = url,
-                    title = title,
-                    isDesktopMode = tabDesktopMode,
-                    isSelected = isSelected,
-                    isIncognito = isIncognito
-                )
-                
-                val webView = WebViewFactory.createWebView(this, tabDesktopMode, isIncognito).apply { tag = tab.id }
-                webView.setDownloadListener(SimpleDownloadListener(this))
-                tab.webView = webView
-                
-                webView.webViewClient = object : WebViewClient() {
-                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                        super.onPageStarted(view, url, favicon)
-                        progressBar.isVisible = true
-                        urlEditText.setText(url ?: "")
-                    }
-
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        progressBar.isVisible = false
-                        browserManager.getCurrentTab()?.apply {
-                            this.url = url ?: ""
-                            this.title = view?.title ?: "New Tab"
-                        }
-                        
-                        view?.let { WebViewFactory.injectViewportFix(it) }
-                        
-                        val savedZoom = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
-                        applyPageZoomJS(view, savedZoom)
-                        
-                        if (tabSlider.isVisible) updateTabSlider()
-                        updateMenuState()
-                    }
-                }
-
-                webView.webChromeClient = object : WebChromeClient() {
-                    override fun onProgressChanged(view: WebView?, progress: Int) {
-                        progressBar.progress = progress
-                        progressBar.isVisible = progress < 100
-                    }
-                }
-                
-                webViewContainer.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-                browserManager.addTab(tab)
-            }
-            
-            val currentTab = if (savedCurrentTabId >= 0) browserManager.getTab(savedCurrentTabId) else browserManager.getCurrentTab()
-            currentTab?.let { showTab(it.id) }
-            
-            currentTab?.let { tab ->
-                if (tab.url.isNotEmpty()) {
-                    tab.webView?.loadUrl(tab.url)
-                }
-            }
-            
-            updateMenuState()
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
+    // ========== Lifecycle ==========
     override fun onPause() {
         super.onPause()
         browserManager.getCurrentTab()?.webView?.onPause()
@@ -608,10 +561,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         browserManager.getCurrentTab()?.webView?.onResume()
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration) {
-        super.onConfigurationChanged(newConfig)
     }
 
     @Deprecated("Deprecated in Java")
@@ -626,16 +575,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Don't save tabs in incognito mode
-        if (!prefs.getBoolean(KEY_INCOGNITO_MODE, false)) {
-            saveTabs()
+        if (!prefs.isIncognitoMode) {
+            saveTabsSmart()
         }
     }
 
     override fun onDestroy() {
-        // Don't save or destroy WebViews in incognito mode immediately
-        if (!prefs.getBoolean(KEY_INCOGNITO_MODE, false)) {
-            saveTabs()
+        if (!prefs.isIncognitoMode) {
+            saveTabsSmart()
         }
         browserManager.getAllTabs().forEach { it.webView?.destroy() }
         super.onDestroy()
