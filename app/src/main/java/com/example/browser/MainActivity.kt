@@ -329,8 +329,8 @@ fun BrowserApp() {
                     }
                 },
                 modifier = Modifier
-                    .fillMaxSize()
                     .weight(1f)
+                    .fillMaxWidth()
             )
 
             // --- BOTTOM NAVIGATION ---
