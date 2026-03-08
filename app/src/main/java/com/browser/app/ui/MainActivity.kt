@@ -517,6 +517,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun clearHistorySmart() {
         browserManager.getAllTabs().forEach { it.webView?.clearHistory() }
+        try {
+            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+            browserDb.clearAllHistory()
+        } catch (e: Exception) {
+        }
         showToast("History cleared")
     }
 
@@ -528,6 +533,11 @@ class MainActivity : AppCompatActivity() {
                 it.clearHistory()
                 it.clearFormData()
             }
+        }
+        try {
+            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+            browserDb.clearAllHistory()
+        } catch (e: Exception) {
         }
         prefs.clearAllData()
         showToast("All data cleared")
