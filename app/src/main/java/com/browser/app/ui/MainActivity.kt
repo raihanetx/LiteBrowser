@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var menuClearData: TextView
     private lateinit var menuCookies: TextView
     private lateinit var menuDownloads: TextView
+    private lateinit var menuHistory: TextView
     private lateinit var zoomSeekBar: SeekBar
     private lateinit var zoomPercentage: TextView
 
@@ -93,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         menuClearData = findViewById(R.id.menuClearData)
         menuCookies = findViewById(R.id.menuCookies)
         menuDownloads = findViewById(R.id.menuDownloads)
+        menuHistory = findViewById(R.id.menuHistory)
         zoomSeekBar = findViewById(R.id.zoomSeekBar)
         zoomPercentage = findViewById(R.id.zoomPercentage)
     }
@@ -128,6 +130,11 @@ class MainActivity : AppCompatActivity() {
 
         menuDownloads.setOnClickListener {
             openDownloadsFolder()
+            drawerLayout.closeDrawers()
+        }
+
+        menuHistory.setOnClickListener {
+            showHistoryDialog()
             drawerLayout.closeDrawers()
         }
 
@@ -229,6 +236,12 @@ class MainActivity : AppCompatActivity() {
                 // DON'T TOUCH - ZOOM
                 val savedZoom = prefs.pageZoom
                 applyPageZoomJS(view, savedZoom)
+                
+                // Save to history
+                if (!url.isNullOrEmpty()) {
+                    val browserDb = com.browser.app.utils.BrowserDatabase(this)
+                    browserDb.addHistory(url, view?.title ?: "")
+                }
                 
                 if (tabSlider.isVisible) updateTabSlider()
                 updateMenuState()
@@ -451,6 +464,31 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showHistoryDialog() {
+        val browserDb = com.browser.app.utils.BrowserDatabase(this)
+        val historyList = browserDb.getAllHistory()
+        
+        if (historyList.isEmpty()) {
+            showToast("No history")
+            return
+        }
+        
+        val items = historyList.take(20).map { "${it.title}\n${it.url}" }.toTypedArray()
+        
+        AlertDialog.Builder(this)
+            .setTitle("History (${historyList.size} items)")
+            .setItems(items) { _, which ->
+                val item = historyList[which]
+                loadUrl(item.url)
+            }
+            .setPositiveButton("Clear All") { _, _ ->
+                browserDb.clearAllHistory()
+                showToast("History cleared")
+            }
+            .setNegativeButton("Close", null)
             .show()
     }
 

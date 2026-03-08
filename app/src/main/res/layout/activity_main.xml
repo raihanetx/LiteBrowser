@@ -261,6 +261,17 @@
             android:paddingHorizontal="8dp"
             android:background="?attr/selectableItemBackground" />
 
+        <!-- HISTORY -->
+        <TextView
+            android:id="@+id/menuHistory"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="History"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:background="?attr/selectableItemBackground" />
+
         <TextView
             android:id="@+id/menuClearData"
             android:layout_width="match_parent"
