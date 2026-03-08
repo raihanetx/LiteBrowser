@@ -301,18 +301,28 @@ class MainActivity : AppCompatActivity() {
     // ========== Close Tab ==========
     private fun closeTab(tabId: Int) {
         val tab = browserManager.getTab(tabId)
-        webViewContainer.removeView(tab?.webView)
-        tab?.webView?.destroy()
+        tab?.webView?.let { wv ->
+            webViewContainer.removeView(wv)
+            wv.destroy()
+        }
         
         browserManager.closeTab(tabId)
         saveTabsSmart()
         
-        browserManager.getCurrentTab()?.let { showTab(it.id) } ?: createNewTab()
+        if (browserManager.getAllTabs().isEmpty()) {
+            createNewTab()
+        } else {
+            browserManager.getCurrentTab()?.let { showTab(it.id) }
+        }
     }
 
     // ========== Load URL ==========
     private fun loadUrl(input: String) {
         hideKeyboard()
+        
+        if (browserManager.getCurrentTab() == null) {
+            createNewTab()
+        }
         
         val url = input.trim().let {
             when {
@@ -607,6 +617,16 @@ class MainActivity : AppCompatActivity() {
                     
                     view?.let { WebViewFactory.injectViewportFix(it) }
                     applyPageZoomJS(view, prefs.pageZoom)
+                    
+                    // Save to history
+                    if (!url.isNullOrEmpty()) {
+                        try {
+                            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+                            browserDb.addHistory(url, view?.title ?: "")
+                        } catch (e: Exception) {
+                            // Ignore history errors
+                        }
+                    }
                     
                     if (tabSlider.isVisible) updateTabSlider()
                     updateMenuState()
