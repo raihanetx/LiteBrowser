@@ -12,6 +12,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import android.webkit.CookieManager
 import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
@@ -239,7 +240,7 @@ class MainActivity : AppCompatActivity() {
                 
                 // Save to history
                 if (!url.isNullOrEmpty()) {
-                    val browserDb = com.browser.app.utils.BrowserDatabase(this)
+                    val browserDb = com.browser.app.utils.BrowserDatabase(this@MainActivity)
                     browserDb.addHistory(url, view?.title ?: "")
                 }
                 
@@ -603,7 +604,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showHistoryDialog() {
-        val browserDb = com.browser.app.utils.BrowserDatabase(this)
+        val browserDb = com.browser.app.utils.BrowserDatabase(this@MainActivity)
         val historyList = browserDb.getAllHistory()
         
         if (historyList.isEmpty()) {
@@ -653,7 +654,7 @@ class MainActivity : AppCompatActivity() {
     private fun clearHistorySmart() {
         browserManager.getAllTabs().forEach { it.webView?.clearHistory() }
         try {
-            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+            val browserDb = com.browser.app.utils.BrowserDatabase(this@MainActivity)
             browserDb.clearAllHistory()
         } catch (e: Exception) {
         }
@@ -670,7 +671,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         try {
-            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+            val browserDb = com.browser.app.utils.BrowserDatabase(this@MainActivity)
             browserDb.clearAllHistory()
         } catch (e: Exception) {
         }
@@ -746,7 +747,7 @@ class MainActivity : AppCompatActivity() {
                     // Save to history
                     if (!url.isNullOrEmpty()) {
                         try {
-                            val browserDb = com.browser.app.utils.BrowserDatabase(this)
+                    val browserDb = com.browser.app.utils.BrowserDatabase(this@MainActivity)
                             browserDb.addHistory(url, view?.title ?: "")
                         } catch (e: Exception) {
                             // Ignore history errors
