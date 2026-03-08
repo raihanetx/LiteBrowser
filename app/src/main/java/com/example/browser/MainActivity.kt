@@ -41,10 +41,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -52,37 +50,31 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
-private val PrimaryBlue = Color(0xFF4285F4)
-private val PrimaryRed = Color(0xFFEA4335)
-private val PrimaryYellow = Color(0xFFFBBC05)
-private val PrimaryGreen = Color(0xFF34A853)
-private val SurfaceWhite = Color(0xFFFFFFFF)
-private val SurfaceDark = Color(0xFF1E1E1E)
-private val BackgroundLight = Color(0xFFF8F9FA)
-private val BackgroundDark = Color(0xFF121212)
-private val TextPrimary = Color(0xFF202124)
-private val TextSecondary = Color(0xFF5F6368)
-private val DividerLight = Color(0xFFE8EAED)
-private val DividerDark = Color(0xFF3C4043)
+private val Blue = Color(0xFF4285F4)
+private val Red = Color(0xFFEA4335)
+private val Yellow = Color(0xFFFBBC05)
+private val Green = Color(0xFF34A853)
+private val White = Color(0xFFFFFFFF)
+private val DarkSurface = Color(0xFF1E1E1E)
+private val LightBg = Color(0xFFF8F9FA)
+private val DarkBg = Color(0xFF121212)
+private val DarkText = Color(0xFF202124)
+private val GrayText = Color(0xFF5F6368)
+private val LightDivider = Color(0xFFE8EAED)
+private val DarkDivider = Color(0xFF3C4043)
 
-data class TabData(
+data class BrowserTab(
     val id: Int,
-    val title: String,
-    val url: String,
-    val favicon: Bitmap? = null,
-    var isLoading: Boolean = false
+    var title: String = "New Tab",
+    var url: String = "",
+    var desktopMode: Boolean = false
 )
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            ProfessionalBrowserApp()
-        }
+        setContent { BrowserApp() }
     }
 
     @Deprecated("Deprecated in Java")
@@ -93,205 +85,124 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun ProfessionalBrowserApp() {
-    val context = LocalContext.current
-    val focusManager = LocalFocusManager.current
-    val scope = rememberCoroutineScope()
-
-    var searchQuery by remember { mutableStateOf("") }
-    var isSearchFocused by remember { mutableStateOf(false) }
-    var isDarkMode by remember { mutableStateOf(false) }
-    var isDesktopMode by remember { mutableStateOf(false) }
+fun BrowserApp() {
+    val focus = LocalFocusManager.current
+    var search by remember { mutableStateOf("") }
+    var focused by remember { mutableStateOf(false) }
+    var darkMode by remember { mutableStateOf(false) }
     var showTabs by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
-    var showHomePage by remember { mutableStateOf(true) }
-
-    var currentUrl by remember { mutableStateOf("") }
-    var pageTitle by remember { mutableStateOf("New Tab") }
-    var loadingProgress by remember { mutableFloatStateOf(0f) }
+    var showHome by remember { mutableStateOf(true) }
+    var loading by remember { mutableFloatStateOf(0f) }
     var webView by remember { mutableStateOf<WebView?>(null) }
-
-    var tabCounter by remember { mutableIntStateOf(1) }
-    val tabs = remember {
-        mutableStateListOf(
-            TabData(id = 1, title = "New Tab", url = "")
-        )
-    }
-
-    val colors = listOf(PrimaryBlue, PrimaryRed, PrimaryYellow, PrimaryGreen)
-
-    val backgroundColor = if (isDarkMode) BackgroundDark else BackgroundLight
-    val surfaceColor = if (isDarkMode) SurfaceDark else SurfaceWhite
-    val textPrimary = if (isDarkMode) SurfaceWhite else TextPrimary
-    val textSecondary = if (isDarkMode) Color(0xFF9AA0A6) else TextSecondary
-    val dividerColor = if (isDarkMode) DividerDark else DividerLight
+    
+    var tabCount by remember { mutableIntStateOf(1) }
+    var activeTabId by remember { mutableIntStateOf(1) }
+    
+    val tabs = remember { mutableStateListOf(BrowserTab(id = 1, title = "New Tab", url = "")) }
+    val activeTab = tabs.find { it.id == activeTabId }
+    val tabColors = listOf(Blue, Red, Yellow, Green)
+    
+    val bg = if (darkMode) DarkBg else LightBg
+    val surface = if (darkMode) DarkSurface else White
+    val textMain = if (darkMode) White else DarkText
+    val textGray = if (darkMode) Color(0xFF9AA0A6) else GrayText
+    val divider = if (darkMode) DarkDivider else LightDivider
 
     fun loadUrl(url: String) {
-        showHomePage = false
-        var fullUrl = url.trim()
-        if (!fullUrl.startsWith("http://") && !fullUrl.startsWith("https://")) {
-            fullUrl = if (fullUrl.contains(".") && !fullUrl.contains(" ")) {
-                "https://$fullUrl"
-            } else {
-                "https://www.google.com/search?q=${fullUrl.replace(" ", "+")}"
-            }
+        showHome = false
+        var full = url.trim()
+        if (!full.startsWith("http://") && !full.startsWith("https://")) {
+            full = if (full.contains(".") && !full.contains(" ")) "https://$full"
+            else "https://www.google.com/search?q=${full.replace(" ", "+")}"
         }
-        searchQuery = fullUrl
-        webView?.loadUrl(fullUrl)
+        search = full
+        webView?.loadUrl(full)
+        activeTab?.url = full
     }
 
-    fun openNewTab() {
-        tabCounter++
-        tabs.add(TabData(id = tabCounter, title = "New Tab", url = ""))
-        showHomePage = true
+    fun newTab() {
+        tabCount++
+        tabs.add(BrowserTab(id = tabCount, title = "New Tab", url = ""))
+        activeTabId = tabCount
+        showHome = true
+        search = ""
         webView?.loadUrl("about:blank")
+        showTabs = false
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-    ) {
+    fun switchTab(id: Int) {
+        val tab = tabs.find { it.id == id } ?: return
+        activeTabId = id
+        showHome = tab.url.isEmpty()
+        search = tab.url
+        if (tab.url.isNotEmpty()) webView?.loadUrl(tab.url) else webView?.loadUrl("about:blank")
+        showTabs = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(bg)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top Bar
+            // Header
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(surfaceColor)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().background(surface).padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Menu Button
                 IconButton(onClick = { showMenu = true }) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = textSecondary
-                    )
+                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = textGray)
                 }
-
                 Spacer(modifier = Modifier.width(8.dp))
-
-                // Search Bar
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(if (isDarkMode) Color(0xFF303134) else Color(0xFFEEEEEE))
-                        .clickable { isSearchFocused = true }
+                    modifier = Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(22.dp))
+                        .background(if (darkMode) Color(0xFF303134) else Color(0xFFEEEEEE))
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = if (loadingProgress > 0 && loadingProgress < 1) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = null,
-                            tint = textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription = null, tint = textGray, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-
-                        if (!isSearchFocused && searchQuery.isEmpty()) {
-                            Text(
-                                "Search or enter URL",
-                                color = textSecondary,
-                                fontSize = 14.sp
-                            )
+                        if (!focused && search.isEmpty()) {
+                            Text("Search or enter URL", color = textGray, fontSize = 14.sp)
                         }
-
                         BasicTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            textStyle = TextStyle(
-                                color = textPrimary,
-                                fontSize = 14.sp
-                            ),
+                            value = search,
+                            onValueChange = { search = it },
+                            textStyle = TextStyle(textMain, fontSize = 14.sp),
                             singleLine = true,
-                            cursorBrush = SolidColor(PrimaryBlue),
+                            cursorBrush = SolidColor(Blue),
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(
-                                onGo = {
-                                    focusManager.clearFocus()
-                                    loadUrl(searchQuery)
-                                }
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .onFocusChanged { isSearchFocused = it.isFocused }
+                            keyboardActions = KeyboardActions(onGo = { focus.clearFocus(); loadUrl(search) }),
+                            modifier = Modifier.weight(1f).onFocusChanged { focused = it.isFocused }
                         )
-
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(
-                                onClick = { searchQuery = "" },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear",
-                                    tint = textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                        if (search.isNotEmpty()) {
+                            IconButton(onClick = { search = "" }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear", tint = textGray, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.width(8.dp))
-
-                // Tab Counter
                 Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(PrimaryBlue)
-                        .clickable { showTabs = true }
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Blue).clickable { showTabs = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(
-                        text = tabs.size.toString(),
-                        color = SurfaceWhite,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(tabs.size.toString(), color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            // Loading Progress
-            val animatedProgress by animateFloatAsState(
-                targetValue = loadingProgress,
-                animationSpec = tween(300)
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .background(if (isDarkMode) DividerDark else DividerLight)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress)
-                        .fillMaxHeight()
-                        .background(PrimaryBlue)
-                )
+            // Progress
+            val anim by animateFloatAsState(targetValue = loading, animationSpec = tween(300))
+            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(divider)) {
+                Box(modifier = Modifier.fillMaxWidth(anim).fillMaxHeight().background(Blue))
             }
 
-            // WebView or Home Page
-            if (showHomePage) {
-                HomePageContent(
-                    isDarkMode = isDarkMode,
-                    onSearch = { loadUrl(it) }
-                )
+            // WebView or Home
+            if (showHome) {
+                HomePage(darkMode = darkMode, onSearch = { loadUrl(it) })
             } else {
                 AndroidView(
                     factory = { ctx ->
                         WebView(ctx).apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
+                            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                             settings.apply {
                                 javaScriptEnabled = true
                                 domStorageEnabled = true
@@ -302,233 +213,93 @@ fun ProfessionalBrowserApp() {
                                 setSupportZoom(true)
                                 cacheMode = WebSettings.LOAD_DEFAULT
                                 allowFileAccess = true
-                                allowContentAccess = true
                                 mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                             }
-
                             webViewClient = object : WebViewClient() {
-                                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                                    loadingProgress = 0.1f
-                                    url?.let {
-                                        currentUrl = it
-                                        searchQuery = it
-                                    }
-                                    super.onPageStarted(view, url, favicon)
+                                override fun onPageStarted(v: WebView?, u: String?, f: Bitmap?) {
+                                    loading = 0.1f
+                                    u?.let { search = it; activeTab?.url = it }
                                 }
-
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    loadingProgress = 0f
-                                    url?.let { currentUrl = it }
-                                    pageTitle = view?.title ?: "Untitled"
-
-                                    if (tabs.isNotEmpty()) {
-                                        tabs[0] = tabs[0].copy(
-                                            title = view?.title ?: "Untitled",
-                                            url = url ?: ""
-                                        )
-                                    }
-                                    super.onPageFinished(view, url)
+                                override fun onPageFinished(v: WebView?, u: String?) {
+                                    loading = 0f
+                                    u?.let { activeTab?.url = it }
+                                    val t = v?.title ?: "Untitled"
+                                    activeTab?.title = t
                                 }
                             }
-
                             webChromeClient = object : WebChromeClient() {
-                                override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                                    loadingProgress = newProgress / 100f
-                                }
-
-                                override fun onReceivedTitle(view: WebView?, title: String?) {
-                                    pageTitle = title ?: "Untitled"
-                                    super.onReceivedTitle(view, title)
-                                }
+                                override fun onProgressChanged(v: WebView?, p: Int) { loading = p / 100f }
                             }
-
-                            setOnKeyListener { _, keyCode, event ->
-                                if (keyCode == KeyEvent.KEYCODE_BACK && event.action == KeyEvent.ACTION_UP) {
-                                    if (canGoBack()) {
-                                        goBack()
-                                        true
-                                    } else {
-                                        false
-                                    }
-                                } else false
+                            setOnKeyListener { _, k, e -> 
+                                if (k == KeyEvent.KEYCODE_BACK && e.action == KeyEvent.ACTION_UP && canGoBack()) { goBack(); true } else false 
                             }
                         }
                     },
-                    update = { wv ->
-                        webView = wv
-                        if (isDesktopMode) {
-                            wv.settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        } else {
-                            wv.settings.userAgentString = null
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                    update = { wv -> webView = wv },
+                    modifier = Modifier.weight(1f).fillMaxWidth()
                 )
             }
 
-            // Bottom Navigation Bar
+            // Bottom Nav
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(surfaceColor)
-                    .padding(horizontal = 4.dp, vertical = 4.dp)
-                    .navigationBarsPadding(),
+                modifier = Modifier.fillMaxWidth().background(surface).padding(4.dp).navigationBarsPadding(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                NavButton(
-                    icon = Icons.Default.ArrowBack,
-                    label = "Back",
-                    enabled = !showHomePage,
-                    isDarkMode = isDarkMode,
-                    onClick = { webView?.goBack() }
-                )
-                NavButton(
-                    icon = Icons.Default.ArrowForward,
-                    label = "Forward",
-                    enabled = !showHomePage,
-                    isDarkMode = isDarkMode,
-                    onClick = { webView?.goForward() }
-                )
-                NavButton(
-                    icon = Icons.Default.Home,
-                    label = "Home",
-                    isDarkMode = isDarkMode,
-                    onClick = {
-                        showHomePage = true
-                        webView?.loadUrl("about:blank")
-                    }
-                )
-                NavButton(
-                    icon = Icons.Default.Add,
-                    label = "Tabs",
-                    isDarkMode = isDarkMode,
-                    onClick = { showTabs = true }
-                )
-                NavButton(
-                    icon = Icons.Default.MoreVert,
-                    label = "Menu",
-                    isDarkMode = isDarkMode,
-                    onClick = { showMenu = true }
-                )
+                NavBtn(Icons.Default.ArrowBack, "Back", !showHome, darkMode) { webView?.goBack() }
+                NavBtn(Icons.Default.ArrowForward, "Forward", !showHome, darkMode) { webView?.goForward() }
+                NavBtn(Icons.Default.Home, "Home", true, darkMode) { showHome = true; webView?.loadUrl("about:blank") }
+                NavBtn(Icons.Default.Add, "Tabs", true, darkMode) { showTabs = true }
+                NavBtn(Icons.Default.MoreVert, "Menu", true, darkMode) { showMenu = true }
             }
         }
 
         // Tab Sheet
         AnimatedVisibility(
             visible = showTabs,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut()
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { showTabs = false }
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { showTabs = false }
             ) {
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                        .background(surfaceColor)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { }
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(surface)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "${tabs.size} Tabs",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = textPrimary
-                        )
-                        Text(
-                            "+ New Tab",
-                            fontSize = 14.sp,
-                            color = PrimaryBlue,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(PrimaryBlue.copy(alpha = 0.1f))
-                                .clickable { openNewTab() }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                    Row(modifier = Modifier.fillMaxWidth().padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("${tabs.size} Tabs", color = textMain, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        Text("+ New", color = Blue, fontSize = 14.sp, 
+                            modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(Blue.copy(alpha = 0.1f))
+                                .clickable { newTab() }.padding(horizontal = 16.dp, vertical = 8.dp))
                     }
-
-                    Divider(color = dividerColor, thickness = 1.dp)
-
-                    LazyRow(
-                        contentPadding = PaddingValues(20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                    Divider(color = divider)
+                    LazyRow(contentPadding = PaddingValues(20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(tabs) { tab ->
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .width(100.dp)
-                                    .clickable {
-                                        webView?.loadUrl(tab.url.ifEmpty { "https://www.google.com" })
-                                        showTabs = false
-                                        showHomePage = false
-                                    }
+                                modifier = Modifier.width(100.dp).clickable { switchTab(tab.id) },
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(70.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(colors[tab.id % colors.size]),
+                                    modifier = Modifier.size(70.dp).clip(RoundedCornerShape(12.dp))
+                                        .background(if (tab.id == activeTabId) Blue else tabColors[tab.id % 4]),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    if (tab.title == "New Tab") {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = null,
-                                            tint = SurfaceWhite,
-                                            modifier = Modifier.size(28.dp)
-                                        )
-                                    } else {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally
-                                        ) {
-                                            Text(
-                                                text = tab.title.take(1).uppercase(),
-                                                fontSize = 24.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = SurfaceWhite
-                                            )
-                                        }
-                                    }
+                                    if (tab.title == "New Tab" || tab.url.isEmpty()) 
+                                        Icon(Icons.Default.Add, contentDescription = null, tint = White, modifier = Modifier.size(28.dp))
+                                    else Text(tab.title.take(1).uppercase(), color = White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = tab.title,
-                                    fontSize = 12.sp,
-                                    color = textPrimary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center
-                                )
+                                Text(if (tab.title == "New Tab") "New Tab" else tab.title, color = textMain, fontSize = 12.sp, 
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                             }
                         }
                     }
-
                     Button(
                         onClick = { showTabs = false },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Done", fontWeight = FontWeight.Bold)
@@ -540,154 +311,54 @@ fun ProfessionalBrowserApp() {
         // Menu Sheet
         AnimatedVisibility(
             visible = showMenu,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut()
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { showMenu = false }
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { showMenu = false }
             ) {
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                        .background(surfaceColor)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { }
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(surface)
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
                 ) {
-                    Text(
-                        text = "Settings",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = textPrimary,
-                        modifier = Modifier.padding(20.dp)
-                    )
-
-                    Divider(color = dividerColor)
-
-                    MenuItem(
-                        icon = Icons.Default.Home,
-                        title = "Home",
-                        subtitle = "Go to homepage",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            showHomePage = true
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.Refresh,
-                        title = "Refresh",
-                        subtitle = "Reload current page",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            webView?.reload()
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.ArrowBack,
-                        title = "Back",
-                        subtitle = "Go back",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            webView?.goBack()
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.ArrowForward,
-                        title = "Forward",
-                        subtitle = "Go forward",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            webView?.goForward()
-                            showMenu = false
-                        }
-                    )
-
-                    Divider(color = dividerColor)
-
-                    MenuItem(
-                        icon = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        title = if (isDarkMode) "Light Mode" else "Dark Mode",
-                        subtitle = "Toggle dark/light theme",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            isDarkMode = !isDarkMode
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.DesktopWindows,
-                        title = "Desktop Mode",
-                        subtitle = if (isDesktopMode) "Currently on" else "Currently off",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            isDesktopMode = !isDesktopMode
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.ZoomIn,
-                        title = "Zoom In",
-                        subtitle = "Increase zoom level",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            webView?.zoomIn()
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.ZoomOut,
-                        title = "Zoom Out",
-                        subtitle = "Decrease zoom level",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            webView?.zoomOut()
-                            showMenu = false
-                        }
-                    )
-
-                    Divider(color = dividerColor)
-
-                    MenuItem(
-                        icon = Icons.Default.Share,
-                        title = "Share",
-                        subtitle = "Share current page",
-                        isDarkMode = isDarkMode,
-                        onClick = {
-                            val shareIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                putExtra(Intent.EXTRA_TEXT, currentUrl)
-                                type = "text/plain"
-                            }
-                            showMenu = false
-                        }
-                    )
-
-                    MenuItem(
-                        icon = Icons.Default.Info,
-                        title = "About",
-                        subtitle = "App version 1.0",
-                        isDarkMode = isDarkMode,
-                        onClick = { showMenu = false }
-                    )
-
+                    Text("Settings", color = textMain, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(20.dp))
+                    Divider(color = divider)
+                    
+                    Text("Navigation", color = textGray, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    MenuBtn(Icons.Default.Home, "Home", "Go to homepage", darkMode) { showHome = true; showMenu = false }
+                    MenuBtn(Icons.Default.Refresh, "Refresh", "Reload page", darkMode) { webView?.reload(); showMenu = false }
+                    MenuBtn(Icons.Default.ArrowBack, "Back", "Go back", darkMode) { webView?.goBack(); showMenu = false }
+                    MenuBtn(Icons.Default.ArrowForward, "Forward", "Go forward", darkMode) { webView?.goForward(); showMenu = false }
+                    
+                    Divider(color = divider)
+                    Text("Display", color = textGray, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    
+                    val isDesktop = activeTab?.desktopMode == true
+                    MenuBtn(
+                        if (darkMode) Icons.Default.LightMode else Icons.Default.DarkMode, 
+                        if (darkMode) "Light Mode" else "Dark Mode", 
+                        "Toggle theme", darkMode
+                    ) { darkMode = !darkMode; showMenu = false }
+                    
+                    MenuBtn(
+                        Icons.Default.DesktopWindows, "Desktop Mode", 
+                        if (isDesktop) "Currently ON" else "Currently OFF", 
+                        darkMode, isDesktop
+                    ) { 
+                        activeTab?.desktopMode = !activeTab?.desktopMode!!
+                        webView?.settings?.userAgentString = if (activeTab?.desktopMode == true) "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" else null
+                        webView?.reload()
+                        showMenu = false 
+                    }
+                    
+                    MenuBtn(Icons.Default.ZoomIn, "Zoom In", "Increase zoom", darkMode) { webView?.zoomIn(); showMenu = false }
+                    MenuBtn(Icons.Default.ZoomOut, "Zoom Out", "Decrease zoom", darkMode) { webView?.zoomOut(); showMenu = false }
+                    
+                    Divider(color = divider)
+                    MenuBtn(Icons.Default.Share, "Share", "Share page", darkMode) { showMenu = false }
+                    MenuBtn(Icons.Default.Info, "About", "Version 1.0", darkMode) { showMenu = false }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
@@ -696,237 +367,99 @@ fun ProfessionalBrowserApp() {
 }
 
 @Composable
-fun NavButton(
-    icon: ImageVector,
-    label: String,
-    enabled: Boolean = true,
-    isDarkMode: Boolean,
-    onClick: () -> Unit
-) {
-    val textSecondary = if (isDarkMode) Color(0xFF9AA0A6) else TextSecondary
-    val iconColor = if (enabled) (if (isDarkMode) Color.White else TextPrimary) else textSecondary
-
+fun NavBtn(icon: ImageVector, label: String, enabled: Boolean, dark: Boolean, onClick: () -> Unit) {
+    val color = if (enabled) (if (dark) White else DarkText) else (if (dark) Color(0xFF9AA0A6) else GrayText)
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 12.dp)
+        modifier = Modifier.clickable(enabled = enabled, onClick = onClick).padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = iconColor,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 10.sp,
-            color = iconColor
-        )
+        Icon(imageVector = icon, contentDescription = label, tint = color, modifier = Modifier.size(22.dp))
+        Text(text = label, color = color, fontSize = 10.sp)
     }
 }
 
 @Composable
-fun MenuItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    isDarkMode: Boolean,
-    onClick: () -> Unit
-) {
-    val textPrimary = if (isDarkMode) Color.White else TextPrimary
-    val textSecondary = if (isDarkMode) Color(0xFF9AA0A6) else TextSecondary
-
+fun MenuBtn(icon: ImageVector, title: String, subtitle: String, dark: Boolean, active: Boolean = false, onClick: () -> Unit) {
+    val txt = if (dark) White else DarkText
+    val gray = if (dark) Color(0xFF9AA0A6) else GrayText
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(PrimaryBlue.copy(alpha = 0.1f)),
+            modifier = Modifier.size(40.dp).clip(CircleShape).background(if (active) Blue else Blue.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = PrimaryBlue,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+        ) { Icon(imageVector = icon, contentDescription = null, tint = if (active) White else Blue, modifier = Modifier.size(20.dp)) }
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = textPrimary
-            )
-            Text(
-                text = subtitle,
-                fontSize = 12.sp,
-                color = textSecondary
-            )
+            Text(text = title, color = txt, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text(text = subtitle, color = gray, fontSize = 12.sp)
         }
+        if (active) Icon(imageVector = Icons.Default.Check, contentDescription = null, tint = Blue, modifier = Modifier.size(20.dp))
     }
 }
 
 @Composable
-fun HomePageContent(
-    isDarkMode: Boolean,
-    onSearch: (String) -> Unit
-) {
-    val backgroundColor = if (isDarkMode) BackgroundDark else BackgroundLight
-    val textPrimary = if (isDarkMode) Color.White else TextPrimary
-    val textSecondary = if (isDarkMode) Color(0xFF9AA0A6) else TextSecondary
-
-    var searchText by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
+fun HomePage(darkMode: Boolean, onSearch: (String) -> Unit) {
+    val bg = if (darkMode) DarkBg else LightBg
+    val txt = if (darkMode) White else DarkText
+    val gray = if (darkMode) Color(0xFF9AA0A6) else GrayText
+    var text by remember { mutableStateOf("") }
+    val focus = LocalFocusManager.current
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().background(bg).padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Logo
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "L",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryBlue
-            )
-            Text(
-                text = "i",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryRed
-            )
-            Text(
-                text = "t",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryYellow
-            )
-            Text(
-                text = "e",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryGreen
-            )
-            Text(
-                text = "Browser",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Medium,
-                color = textPrimary
-            )
+        Row {
+            Text(text = "L", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Blue)
+            Text(text = "i", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Red)
+            Text(text = "t", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Yellow)
+            Text(text = "e", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Green)
+            Text(text = "Browser", fontSize = 32.sp, fontWeight = FontWeight.Medium, color = txt)
         }
-
         Spacer(modifier = Modifier.height(40.dp))
-
-        // Search Box
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .clip(RoundedCornerShape(26.dp))
-                .background(if (isDarkMode) Color(0xFF303134) else Color.White)
-                .clickable { }
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp))
+                .background(if (darkMode) Color(0xFF303134) else White).padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = null,
-                    tint = textSecondary,
-                    modifier = Modifier.size(20.dp)
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = gray, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 BasicTextField(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    textStyle = TextStyle(
-                        color = textPrimary,
-                        fontSize = 16.sp
-                    ),
+                    value = text,
+                    onValueChange = { text = it },
+                    textStyle = TextStyle(txt, fontSize = 16.sp),
                     singleLine = true,
-                    cursorBrush = SolidColor(PrimaryBlue),
+                    cursorBrush = SolidColor(Blue),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(
-                        onSearch = {
-                            focusManager.clearFocus()
-                            onSearch(searchText)
-                        }
-                    ),
+                    keyboardActions = KeyboardActions(onSearch = { focus.clearFocus(); onSearch(text) }),
                     modifier = Modifier.weight(1f)
                 )
             }
         }
-
         Spacer(modifier = Modifier.height(32.dp))
-
-        // Quick Links
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            QuickLink(
-                icon = Icons.Default.Search,
-                label = "Search",
-                isDarkMode = isDarkMode,
-                onClick = { onSearch(searchText) }
-            )
-            QuickLink(
-                icon = Icons.Default.Language,
-                label = "Visit",
-                isDarkMode = isDarkMode,
-                onClick = { onSearch(searchText) }
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            Column(
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (darkMode) DarkSurface else White)
+                    .clickable { onSearch(text) }.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Blue, modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Search", color = if (darkMode) White else DarkText, fontSize = 12.sp)
+            }
+            Column(
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (darkMode) DarkSurface else White)
+                    .clickable { onSearch(text) }.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(imageVector = Icons.Default.Language, contentDescription = null, tint = Blue, modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(text = "Visit", color = if (darkMode) White else DarkText, fontSize = 12.sp)
+            }
         }
-    }
-}
-
-@Composable
-fun QuickLink(
-    icon: ImageVector,
-    label: String,
-    isDarkMode: Boolean,
-    onClick: () -> Unit
-) {
-    val surfaceColor = if (isDarkMode) SurfaceDark else SurfaceWhite
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(surfaceColor)
-            .clickable { onClick() }
-            .padding(16.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = PrimaryBlue,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = if (isDarkMode) Color.White else TextPrimary
-        )
     }
 }
