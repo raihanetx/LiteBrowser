@@ -347,33 +347,31 @@ class MainActivity : AppCompatActivity() {
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Apply zoom immediately using JavaScript
+        // Apply zoom immediately using JavaScript via loadUrl
         browserManager.getCurrentTab()?.webView?.let { wv ->
-            applyZoomJS(wv, zoomPercent)
+            if (!wv.url.isNullOrEmpty()) {
+                applyZoomJS(wv, zoomPercent)
+            }
         }
     }
 
     private fun applyZoomJS(webView: WebView, percent: Int) {
         val scale = percent / 100f
-        val js = """
-            (function() {
-                document.body.style.zoom = '${(scale * 100)}%';
-                document.documentElement.style.zoom = '${(scale * 100)}%';
-                var meta = document.querySelector('meta[name="viewport"]');
-                if (meta) {
-                    var content = meta.getAttribute('content');
-                    content = content.replace(/initial-scale\s*=\s*[0-9.]+/gi, 'initial-scale=$scale');
-                    content = content.replace(/maximum-scale\s*=\s*[0-9.]+/gi, 'maximum-scale=5.0');
-                    content = content.replace(/minimum-scale\s*=\s*[0-9.]+/gi, 'minimum-scale=0.1');
-                    meta.setAttribute('content', content);
-                }
-            })();
-        """.trimIndent()
-        webView.evaluateJavascript(js, null)
+        
+        // Use loadUrl with javascript: - more reliable than evaluateJavascript
+        val js = "javascript:(function() { " +
+            "document.body.style.zoom='${scale}'; " +
+            "document.body.style.transform='scale(${scale})'; " +
+            "document.body.style.transformOrigin='top left'; " +
+            "var m=document.querySelector('meta[name=\"viewport\"]'); " +
+            "if(m)m.setAttribute('content','width=device-width,initial-scale=${scale},maximum-scale=5,minimum-scale=0.1'); " +
+            "else{var m=document.createElement('meta');m.name='viewport';m.content='width=device-width,initial-scale=${scale},maximum-scale=5,minimum-scale=0.1';document.head.appendChild(m);}" +
+            "})();"
+        
+        webView.loadUrl(js)
     }
 
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        // Apply initial scale when page loads
         webView?.let { wv ->
             wv.settings.apply {
                 useWideViewPort = true
@@ -382,8 +380,10 @@ class MainActivity : AppCompatActivity() {
                 displayZoomControls = false
                 setSupportZoom(true)
             }
-            // Apply zoom on page load
-            applyZoomJS(wv, prefs.pageZoom)
+            // Apply zoom after a short delay to ensure page is loaded
+            wv.postDelayed({
+                applyZoomJS(wv, prefs.pageZoom)
+            }, 500)
         }
     }
 
