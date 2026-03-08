@@ -23,6 +23,11 @@ class BrowserPreferences(context: Context) {
         private const val KEY_PAGE_ZOOM = "page_zoom_percent"
         private const val KEY_INCOGNITO_MODE = "incognito_mode"
         
+        // Cookie Settings
+        private const val KEY_BLOCK_THIRD_PARTY_COOKIES = "block_third_party_cookies"
+        private const val KEY_BLOCKED_SITES = "blocked_cookie_sites"
+        private const val KEY_ALLOWED_SITES = "allowed_cookie_sites"
+        
         // Defaults
         private const val ZOOM_DEFAULT = 100
     }
@@ -41,6 +46,28 @@ class BrowserPreferences(context: Context) {
     var pageZoom: Int
         get() = prefs.getInt(KEY_PAGE_ZOOM, ZOOM_DEFAULT)
         set(value) = prefs.edit().putInt(KEY_PAGE_ZOOM, value).apply()
+
+    // ========== Cookie Settings ==========
+    var blockThirdPartyCookies: Boolean
+        get() = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY_COOKIES, false)
+        set(value) = prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY_COOKIES, value).apply()
+
+    // ========== Blocked/Allowed Sites ==========
+    fun getBlockedSites(): Set<String> {
+        return prefs.getStringSet(KEY_BLOCKED_SITES, emptySet()) ?: emptySet()
+    }
+
+    fun saveBlockedSites(sites: Set<String>) {
+        prefs.edit().putStringSet(KEY_BLOCKED_SITES, sites).apply()
+    }
+
+    fun getAllowedSites(): Set<String> {
+        return prefs.getStringSet(KEY_ALLOWED_SITES, emptySet()) ?: emptySet()
+    }
+
+    fun saveAllowedSites(sites: Set<String>) {
+        prefs.edit().putStringSet(KEY_ALLOWED_SITES, sites).apply()
+    }
 
     // ========== Tab Management ==========
     

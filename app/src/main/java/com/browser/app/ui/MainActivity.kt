@@ -459,22 +459,147 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showCookiesDialog() {
-        val options = arrayOf("View Cookies", "Clear Cookies", "Block Third-Party Cookies")
+        val options = arrayOf(
+            "📊 View All Cookies",
+            "🛡️ Third-Party Cookies: ${if (prefs.blockThirdPartyCookies) "BLOCKED" else "ALLOWED"}",
+            "🚫 Block Specific Sites",
+            "✅ Allow Specific Sites",
+            "🗑️ Clear All Cookies"
+        )
         
         AlertDialog.Builder(this)
-            .setTitle("Cookie Management")
+            .setTitle("🍪 Cookie Manager")
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> showToast("View cookies feature coming soon")
-                    1 -> {
-                        WebViewFactory.clearAllCookies()
-                        showToast("Cookies cleared")
-                    }
-                    2 -> showToast("Cookie blocking coming soon")
+                    0 -> showAllCookies()
+                    1 -> toggleThirdPartyCookies()
+                    2 -> showBlockSitesDialog()
+                    3 -> showAllowSitesDialog()
+                    4 -> clearAllCookies()
                 }
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showAllCookies() {
+        try {
+            val cookieManager = CookieManager.getInstance()
+            // Show cookie info dialog
+            AlertDialog.Builder(this)
+                .setTitle("📊 Cookie Information")
+                .setMessage("""
+                    LiteBrowser Cookie Management:
+                    
+                    • Session cookies are kept while app is open
+                    • Third-party cookies can be blocked for privacy
+                    • You can block specific websites
+                    • All cookies are cleared when you select "Clear Data"
+                    
+                    Current Settings:
+                    • Third-Party Cookies: ${if (prefs.blockThirdPartyCookies) "BLOCKED 🚫" else "ALLOWED ✅"}
+                    • Blocked Sites: ${prefs.getBlockedSites().size} sites
+                    • Allowed Sites: ${prefs.getAllowedSites().size} sites
+                """.trimIndent())
+                .setPositiveButton("OK", null)
+                .show()
+        } catch (e: Exception) {
+            showToast("Cannot access cookies")
+        }
+    }
+
+    private fun toggleThirdPartyCookies() {
+        prefs.blockThirdPartyCookies = !prefs.blockThirdPartyCookies
+        
+        // Reload all tabs to apply the change
+        browserManager.getAllTabs().forEach { tab ->
+            tab.webView?.let { wv ->
+                try {
+                    CookieManager.getInstance().setAcceptThirdPartyCookies(wv, !prefs.blockThirdPartyCookies)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+                if (!wv.url.isNullOrEmpty()) {
+                    wv.reload()
+                }
+            }
+        }
+        
+        showToast(if (prefs.blockThirdPartyCookies) "Third-party cookies BLOCKED" else "Third-party cookies ALLOWED")
+    }
+
+    private fun showBlockSitesDialog() {
+        val blockableDomains = WebViewFactory.getBlockableDomains()
+        val currentBlocked = prefs.getBlockedSites().toMutableSet()
+        
+        val items = blockableDomains.map { domain ->
+            if (currentBlocked.contains(domain)) "🚫 $domain" else "⚪ $domain"
+        }.toTypedArray()
+        
+        val selected = BooleanArray(blockableDomains.size) { currentBlocked.contains(blockableDomains[it]) }
+        
+        AlertDialog.Builder(this)
+            .setTitle("🚫 Block Cookie Sites")
+            .setMultiChoiceItems(items, selected) { _, which, isChecked ->
+                if (isChecked) {
+                    currentBlocked.add(blockableDomains[which])
+                } else {
+                    currentBlocked.remove(blockableDomains[which])
+                }
+            }
+            .setPositiveButton("Save") { _, _ ->
+                prefs.saveBlockedSites(currentBlocked)
+                showToast("Blocked sites updated")
+                // Reload to apply
+                browserManager.getAllTabs().forEach { it.webView?.reload() }
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showAllowSitesDialog() {
+        val commonSites = listOf(
+            "google.com",
+            "facebook.com",
+            "youtube.com",
+            "twitter.com",
+            "instagram.com",
+            "reddit.com",
+            "wikipedia.org",
+            "amazon.com",
+            "netflix.com",
+            "linkedin.com"
+        )
+        
+        val currentAllowed = prefs.getAllowedSites().toMutableSet()
+        
+        val items = commonSites.map { domain ->
+            if (currentAllowed.contains(domain)) "✅ $domain" else "⚪ $domain"
+        }.toTypedArray()
+        
+        val selected = BooleanArray(commonSites.size) { currentAllowed.contains(commonSites[it]) }
+        
+        AlertDialog.Builder(this)
+            .setTitle("✅ Allow Cookie Sites")
+            .setMultiChoiceItems(items, selected) { _, which, isChecked ->
+                if (isChecked) {
+                    currentAllowed.add(commonSites[which])
+                } else {
+                    currentAllowed.remove(commonSites[which])
+                }
+            }
+            .setPositiveButton("Save") { _, _ ->
+                prefs.saveAllowedSites(currentAllowed)
+                showToast("Allowed sites updated")
+                browserManager.getAllTabs().forEach { it.webView?.reload() }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearAllCookies() {
+        WebViewFactory.clearAllCookies()
+        showToast("All cookies cleared")
     }
 
     private fun showHistoryDialog() {
