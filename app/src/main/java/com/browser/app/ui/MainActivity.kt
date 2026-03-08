@@ -2,9 +2,11 @@ package com.browser.app.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Environment
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -57,6 +59,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var menuDesktop: TextView
     private lateinit var menuIncognito: TextView
     private lateinit var menuClearData: TextView
+    private lateinit var menuCookies: TextView
+    private lateinit var menuDownloads: TextView
     private lateinit var zoomSeekBar: SeekBar
     private lateinit var zoomPercentage: TextView
 
@@ -87,6 +91,8 @@ class MainActivity : AppCompatActivity() {
         menuDesktop = findViewById(R.id.menuDesktop)
         menuIncognito = findViewById(R.id.menuIncognito)
         menuClearData = findViewById(R.id.menuClearData)
+        menuCookies = findViewById(R.id.menuCookies)
+        menuDownloads = findViewById(R.id.menuDownloads)
         zoomSeekBar = findViewById(R.id.zoomSeekBar)
         zoomPercentage = findViewById(R.id.zoomPercentage)
     }
@@ -115,6 +121,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Clear Data - SMART
+        menuCookies.setOnClickListener {
+            showCookiesDialog()
+            drawerLayout.closeDrawers()
+        }
+
+        menuDownloads.setOnClickListener {
+            openDownloadsFolder()
+            drawerLayout.closeDrawers()
+        }
+
         menuClearData.setOnClickListener {
             showClearDataDialog()
             drawerLayout.closeDrawers()
@@ -417,6 +433,38 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showCookiesDialog() {
+        val options = arrayOf("View Cookies", "Clear Cookies", "Block Third-Party Cookies")
+        
+        AlertDialog.Builder(this)
+            .setTitle("Cookie Management")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showToast("View cookies feature coming soon")
+                    1 -> {
+                        WebViewFactory.clearAllCookies()
+                        showToast("Cookies cleared")
+                    }
+                    2 -> showToast("Cookie blocking coming soon")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openDownloadsFolder() {
+        try {
+            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(android.net.Uri.fromFile(downloadDir), "*/*")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            showToast("Open Downloads app to view files")
+        }
     }
 
     private fun clearCookiesSmart() {

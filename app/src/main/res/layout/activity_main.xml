@@ -239,6 +239,28 @@
             android:paddingHorizontal="8dp"
             android:background="?attr/selectableItemBackground" />
 
+        <!-- COOKIE MANAGEMENT -->
+        <TextView
+            android:id="@+id/menuCookies"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Manage Cookies"
+            android:textSize="16sp"
+            android:gravity="center_Vertical"
+            android:paddingHorizontal="8dp"
+            android:background="?attr/selectableItemBackground" />
+
+        <!-- DOWNLOADS -->
+        <TextView
+            android:id="@+id/menuDownloads"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Downloads"
+            android:textSize="16sp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:background="?attr/selectableItemBackground" />
+
         <TextView
             android:id="@+id/menuClearData"
             android:layout_width="match_parent"
