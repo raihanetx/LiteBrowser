@@ -34,9 +34,30 @@ jobs:
           cd browser_app
           ./gradlew assembleRelease
 
-      - name: Upload APK to Release
-        uses: softprops/action-gh-release@v1
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
         with:
+          name: debug-apk
+          path: browser_app/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## LiteBrowser v${{ github.ref_name }}
+            
+            ### Features:
+            - 🍪 Professional Cookie Management
+            - 🛡️ Third-party cookie blocking
+            - 🚫 Block/Allow specific sites
+            - 📜 Browsing History
+            - 🔒 Incognito Mode
+            - 🖥️ Desktop Mode
+            - 🔍 Zoom (50%-150%)
+            
+            ### Download:
+            - Debug APK: app-debug.apk
+            - Release APK: app-release-unsigned.apk
           files: |
             browser_app/app/build/outputs/apk/debug/app-debug.apk
             browser_app/app/build/outputs/apk/release/app-release-unsigned.apk
