@@ -87,13 +87,7 @@ object WebViewFactory {
      * Reset zoom to default without reloading
      */
     fun resetZoom(webView: WebView) {
-        // Reset to default - let native zoom work
-        webView.settings.apply {
-            useWideViewPort = true
-            loadWithOverviewMode = true
-        }
-        // Also reset the viewport via JS
-        injectViewportFix(webView)
+        // No longer needed - using native zoom
     }
 
     /**
@@ -138,8 +132,7 @@ object WebViewFactory {
 
     fun setDesktopMode(webView: WebView, enabled: Boolean) {
         webView.settings.userAgentString = if (enabled) DESKTOP_UA else MOBILE_UA
-        // Reset zoom when switching mode to avoid half-screen issues
-        resetZoom(webView)
+        webView.reload()
     }
 
     fun injectViewportFix(webView: WebView) {

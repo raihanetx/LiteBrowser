@@ -341,63 +341,55 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== NATIVE ZOOM - No more JavaScript zoom! ==========
+    // ========== ZOOM - Fixed implementation ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         
-        browserManager.getCurrentTab()?.webView?.let { wv ->
-            // Use native zoom controls instead of JavaScript
-            applyNativeZoom(wv, zoomPercent)
-        }
-        
+        // Save preference - will be applied on next page load
         zoomPercentage.text = "$zoomPercent%"
-    }
-
-    private fun applyNativeZoom(webView: WebView, percent: Int) {
-        // Convert percentage to scale
-        val scale = percent / 100f
         
-        // Use built-in zoom with setInitialScale
-        webView.settings.apply {
-            // Set initial scale based on percentage (multiply by 100 for setInitialScale)
-            val initialScale = (percent * 100 / 100).coerceIn(25, 400)
-            webView.setInitialScale(initialScale)
-            
-            // Let pinch-to-zoom work naturally
-            builtInZoomControls = true
-            setSupportZoom(true)
+        // Apply zoom to current page if loaded
+        browserManager.getCurrentTab()?.webView?.let { wv ->
+            if (!wv.url.isNullOrEmpty()) {
+                // Reload to apply new zoom level
+                wv.reload()
+            }
         }
     }
 
-    // Keep applyPageZoomJS for viewport fix only (not for zoom control)
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        // Only inject viewport fix for proper rendering - NOT for zoom
         webView?.let { wv ->
-            // Just ensure viewport is properly set
-            wv.settings.useWideViewPort = true
-            wv.settings.loadWithOverviewMode = true
+            // Apply initial scale when page loads
+            val savedZoom = prefs.pageZoom
+            wv.setInitialScale(savedZoom)
+            
+            // Ensure viewport settings are correct
+            wv.settings.apply {
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                builtInZoomControls = true
+                displayZoomControls = false
+                setSupportZoom(true)
+            }
         }
     }
 
-    // ========== DESKTOP MODE - Fixed ==========
+    // ========== DESKTOP MODE - Clean implementation ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = prefs.isDesktopMode
             tab.webView?.let { wv ->
-                // Update user agent
+                // Simply change user agent and reload
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
                 }
                 
-                // Reset zoom to avoid half-screen - this is the key fix!
-                WebViewFactory.resetZoom(wv)
-                
-                // Reload to apply changes
+                // Reload to apply desktop/mobile view
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 }
