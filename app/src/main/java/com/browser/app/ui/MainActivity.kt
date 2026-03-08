@@ -341,30 +341,40 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Fixed implementation ==========
+    // ========== ZOOM - Working implementation ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
-        
-        // Save preference - will be applied on next page load
         zoomPercentage.text = "$zoomPercent%"
         
-        // Apply zoom to current page if loaded
+        // Apply zoom immediately using JavaScript
         browserManager.getCurrentTab()?.webView?.let { wv ->
-            if (!wv.url.isNullOrEmpty()) {
-                // Reload to apply new zoom level
-                wv.reload()
-            }
+            applyZoomJS(wv, zoomPercent)
         }
     }
 
+    private fun applyZoomJS(webView: WebView, percent: Int) {
+        val scale = percent / 100f
+        val js = """
+            (function() {
+                document.body.style.zoom = '${(scale * 100)}%';
+                document.documentElement.style.zoom = '${(scale * 100)}%';
+                var meta = document.querySelector('meta[name="viewport"]');
+                if (meta) {
+                    var content = meta.getAttribute('content');
+                    content = content.replace(/initial-scale\s*=\s*[0-9.]+/gi, 'initial-scale=$scale');
+                    content = content.replace(/maximum-scale\s*=\s*[0-9.]+/gi, 'maximum-scale=5.0');
+                    content = content.replace(/minimum-scale\s*=\s*[0-9.]+/gi, 'minimum-scale=0.1');
+                    meta.setAttribute('content', content);
+                }
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(js, null)
+    }
+
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
+        // Apply initial scale when page loads
         webView?.let { wv ->
-            // Apply initial scale when page loads
-            val savedZoom = prefs.pageZoom
-            wv.setInitialScale(savedZoom)
-            
-            // Ensure viewport settings are correct
             wv.settings.apply {
                 useWideViewPort = true
                 loadWithOverviewMode = true
@@ -372,24 +382,25 @@ class MainActivity : AppCompatActivity() {
                 displayZoomControls = false
                 setSupportZoom(true)
             }
+            // Apply zoom on page load
+            applyZoomJS(wv, prefs.pageZoom)
         }
     }
 
-    // ========== DESKTOP MODE - Clean implementation ==========
+    // ========== DESKTOP MODE ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = prefs.isDesktopMode
             tab.webView?.let { wv ->
-                // Simply change user agent and reload
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
                 }
                 
-                // Reload to apply desktop/mobile view
+                // Reload to get desktop/mobile version
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 }
