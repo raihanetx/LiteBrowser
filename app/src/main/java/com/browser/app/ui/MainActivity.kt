@@ -350,27 +350,13 @@ class MainActivity : AppCompatActivity() {
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Show toast to confirm zoom is being applied
-        showToast("Applying zoom: $zoomPercent%")
-        
-        // Apply to current tab
         browserManager.getCurrentTab()?.webView?.let { wv ->
-            // Stop current loading
-            wv.stopLoading()
-            
-            // Set initial scale
             wv.setInitialScale(zoomPercent)
-            
-            // Reload to apply
-            if (!wv.url.isNullOrEmpty()) {
-                wv.reload()
-            } else {
-                // If no URL, load default
-                loadUrl(getString(R.string.default_url))
-            }
+            val scale = zoomPercent / 100f
+            val zoomJS = "javascript:(function(){document.body.style.zoom='${scale}';document.body.style.transform='scale(${scale})';document.body.style.transformOrigin='top left';})();"
+            wv.loadUrl(zoomJS)
         }
         
-        // Update menu state
         updateMenuState()
     }
 
@@ -398,38 +384,49 @@ class MainActivity : AppCompatActivity() {
         val newMode = !prefs.isDesktopMode
         prefs.isDesktopMode = newMode
         
-        // Get current URL before reload
-        val currentTab = browserManager.getCurrentTab()
-        val currentUrl = currentTab?.url ?: ""
-        
-        // Apply to all tabs
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = newMode
             tab.webView?.let { wv ->
-                // Force clear cache before changing
-                wv.clearCache(true)
+                wv.stopLoading()
                 
-                // Change user agent
                 val ua = if (newMode) WebViewFactory.DESKTOP_UA else WebViewFactory.MOBILE_UA
                 wv.settings.userAgentString = ua
                 
-                // Stop current loading
-                wv.stopLoading()
+                if (newMode) {
+                    val desktopViewJS = """
+                        javascript:(function(){
+                            var m = document.querySelector('meta[name="viewport"]');
+                            if(m){
+                                m.setAttribute('content', 'width=1280, initial-scale=0.8, maximum-scale=5.0, user-scalable=yes');
+                            }else{
+                                var m = document.createElement('meta');
+                                m.name = 'viewport';
+                                m.content = 'width=1280, initial-scale=0.8, maximum-scale=5.0, user-scalable=yes';
+                                document.head.appendChild(m);
+                            }
+                        })();
+                    """.trimIndent()
+                    wv.loadUrl(desktopViewJS)
+                } else {
+                    val mobileViewJS = """
+                        javascript:(function(){
+                            var m = document.querySelector('meta[name="viewport"]');
+                            if(m){
+                                m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes');
+                            }
+                        })();
+                    """.trimIndent()
+                    wv.loadUrl(mobileViewJS)
+                }
                 
-                // Reload with new settings
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 }
             }
         }
         
-        // Save state
         saveTabsSmart()
-        
-        // Update menu
         updateMenuState()
-        
-        // Show toast
         showToast(if (newMode) "Desktop Mode ON - Reloading..." else "Desktop Mode OFF - Reloading...")
     }
 
