@@ -25,21 +25,25 @@ fun BrowserWebView(
     val tabs by viewModel.tabs.collectAsState()
     val currentIndex by viewModel.currentTabIndex.collectAsState()
     val desktopMode by viewModel.desktopMode.collectAsState()
+    val zoomLevel by viewModel.zoomLevel.collectAsState()
 
     val currentTab = if (currentIndex in tabs.indices) tabs[currentIndex] else null
     val currentUrl = currentTab?.url ?: ""
-    val currentZoom = currentTab?.zoomLevel ?: 1.0f
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var originalUserAgent by remember { mutableStateOf<String?>(null) }
 
-    // Apply zoom via JavaScript
-    fun applyZoom(wv: WebView, zoom: Float) {
-        val js = "document.body.style.zoom = ${zoom}f;"
-        wv.evaluateJavascript(js, null)
+    // Apply native zoom using WebView.zoomBy
+    fun applyNativeZoom(wv: WebView, targetZoom: Float) {
+        val currentScale = wv.scale
+        if (currentScale != 0f) {
+            val factor = targetZoom / currentScale
+            // Clamp factor to WebView limits (0.25 to 5.0)
+            val clampedFactor = factor.coerceIn(0.25f, 5.0f)
+            wv.zoomBy(clampedFactor)
+        }
     }
 
-    // Main setup effect
     DisposableEffect(
         key1 = webView,
         key2 = currentUrl,
@@ -68,7 +72,6 @@ fun BrowserWebView(
             wv.settings.userAgentString = targetUA
         }
 
-        // Set clients
         wv.webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
                 viewModel.setProgress(newProgress)
@@ -94,8 +97,8 @@ fun BrowserWebView(
                 viewModel.setIsLoading(false)
                 viewModel.setProgress(100)
                 url?.let { viewModel.updateCurrentTabUrl(it) }
-                // Apply current zoom after page load
-                view?.let { applyZoom(it, currentZoom) }
+                // Apply zoom after page loads
+                view?.let { applyNativeZoom(it, zoomLevel) }
             }
 
             override fun shouldOverrideUrlLoading(
@@ -130,12 +133,9 @@ fun BrowserWebView(
     }
 
     // Apply zoom when it changes
-    DisposableEffect(webView, currentZoom, currentUrl) {
+    DisposableEffect(webView, zoomLevel) {
         val wv = webView ?: return@DisposableEffect onDispose { }
-        // Only apply if this WebView is showing the current tab's URL
-        if (wv.url == currentUrl || currentUrl == "about:blank") {
-            applyZoom(wv, currentZoom)
-        }
+        applyNativeZoom(wv, zoomLevel)
         onDispose { }
     }
 
