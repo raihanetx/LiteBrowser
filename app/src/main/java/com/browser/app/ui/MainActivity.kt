@@ -344,76 +344,63 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Browser zoom as per article ==========
-    // Browser zoom: zooms entire webpage (text + images + everything)
-    // This is enabled natively by WebView's pinch-to-zoom
-    
+    // ========== ZOOM - Fresh implementation ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Browser zoom works via pinch-to-zoom natively
-        // Just save preference - WebView handles zoom automatically
-        showToast("Pinch to zoom in/out - slider shows zoom level")
+        // Apply zoom by reloading with new scale
+        browserManager.getCurrentTab()?.webView?.let { wv ->
+            // Set initial scale - this is the key!
+            wv.settings.useWideViewPort = true
+            wv.settings.loadWithOverviewMode = true
+            
+            // Reload to apply new zoom
+            if (!wv.url.isNullOrEmpty()) {
+                wv.reload()
+            }
+        }
         
         updateMenuState()
     }
 
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        // Ensure browser zoom is enabled
-        webView?.settings?.apply {
-            builtInZoomControls = true
-            displayZoomControls = false
-            setSupportZoom(true)
-            useWideViewPort = true
-            loadWithOverviewMode = true
+        webView?.let { wv ->
+            // Ensure zoom is enabled
+            wv.settings.apply {
+                builtInZoomControls = true
+                displayZoomControls = false
+                setSupportZoom(true)
+                useWideViewPort = true
+                loadWithOverviewMode = true
+            }
+            
+            // Inject viewport meta
+            val js = "javascript:(function(){var m=document.querySelector('meta[name=\"viewport\"]');if(m)m.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes');else{var m=document.createElement('meta');m.name='viewport';m.content='width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes';document.head.appendChild(m)}})();"
+            wv.loadUrl(js)
         }
-        
-        // Inject viewport that allows zooming (as per article)
-        val viewportJS = """
-            javascript:(function(){
-                var m = document.querySelector('meta[name="viewport"]');
-                if(m){
-                    m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes');
-                }else{
-                    var m = document.createElement('meta');
-                    m.name = 'viewport';
-                    m.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes';
-                    document.head.appendChild(m);
-                }
-                // Enable touch-action for pinch zoom (as per article)
-                document.body.style.touchAction = 'manipulation';
-            })();
-        """.trimIndent()
-        webView?.loadUrl(viewportJS)
     }
 
-    // ========== DESKTOP MODE - Simple and working ==========
+    // ========== DESKTOP MODE - Fresh implementation ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
-        // Save current tab URLs
-        val tabUrls = browserManager.getAllTabs().map { it.url }
-        
-        // Destroy all WebViews
-        browserManager.getAllTabs().forEach { tab ->
-            tab.webView?.destroy()
-        }
-        webViewContainer.removeAllViews()
-        browserManager.clearAllTabs()
-        
-        // Recreate tabs with new user agent
-        tabUrls.forEachIndexed { index, url ->
-            createNewTab(loadUrlNow = false)
-            if (url.isNotEmpty()) {
-                browserManager.getCurrentTab()?.url = url
-                browserManager.getCurrentTab()?.webView?.loadUrl(url)
+        // Apply to current tab only
+        browserManager.getCurrentTab()?.let { tab ->
+            tab.webView?.let { wv ->
+                // Change user agent
+                wv.settings.userAgentString = if (prefs.isDesktopMode) {
+                    WebViewFactory.DESKTOP_UA
+                } else {
+                    WebViewFactory.MOBILE_UA
+                }
+                
+                // Reload to get desktop/mobile version
+                if (!wv.url.isNullOrEmpty()) {
+                    wv.reload()
+                }
             }
-        }
-        
-        if (browserManager.getAllTabs().isEmpty()) {
-            createNewTab(true)
         }
         
         saveTabsSmart()
