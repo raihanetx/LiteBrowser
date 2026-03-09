@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.browser.app.ui.theme.BrowserTheme
-import com.browser.app.ui.components.BottomNavigationBar
 import com.browser.app.ui.components.BrowserWebView
 import com.browser.app.ui.components.TabManagerBottomSheet
 import com.browser.app.ui.components.TopBar
@@ -49,8 +48,6 @@ fun BrowserScreen(
             ) {
                 BrowserWebView(viewModel = viewModel)
             }
-
-            BottomNavigationBar(viewModel = viewModel)
         }
 
         if (showTabManager) {
