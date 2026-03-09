@@ -346,27 +346,24 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Working ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
         try {
-            val wv = browserManager.getCurrentTab()?.webView
-            if (wv != null) {
-                // CRITICAL: Set initial scale BEFORE reloading
+            val tab = browserManager.getCurrentTab()
+            val wv = tab?.webView
+            if (wv != null && tab.url.isNotEmpty()) {
+                // Get current URL before any changes
+                val currentUrl = tab.url
+                // Set scale BEFORE loading
                 wv.setInitialScale(zoomPercent)
-                
-                // Reload to apply
-                if (!wv.url.isNullOrEmpty()) {
-                    wv.reload()
-                } else {
-                    wv.loadUrl(getString(R.string.default_url))
-                }
+                // Load URL fresh (not reload) to apply scale
+                wv.loadUrl(currentUrl)
                 showToast("Zoom: $zoomPercent%")
             } else {
-                showToast("No page")
+                showToast("Load a page first")
             }
         } catch (e: Exception) {
             showToast("Error")
@@ -385,39 +382,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========== DESKTOP MODE - Working ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         try {
-            val wv = browserManager.getCurrentTab()?.webView
-            if (wv != null) {
+            val tab = browserManager.getCurrentTab()
+            val wv = tab?.webView
+            if (wv != null && tab.url.isNotEmpty()) {
                 // Change user agent
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
-                 }
-                 
-                 // Reload to apply
-                 wv.setInitialScale(prefs.pageZoom)
-                 if (!wv.url.isNullOrEmpty()) {
-                     wv.reload()
-                 } else {
-                     wv.loadUrl(getString(R.string.default_url))
-                 }
+                }
+                
+                // Get current URL
+                val currentUrl = tab.url
+                // Set zoom scale before loading
+                wv.setInitialScale(prefs.pageZoom)
+                // Load fresh (not reload) to apply user agent
+                wv.loadUrl(currentUrl)
                 
                 showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
             } else {
-                showToast("No webview")
+                showToast("Load a page first")
             }
         } catch (e: Exception) {
             showToast("Error")
         }
         
-         saveTabsSmart()
-         updateMenuState()
-     }
+        saveTabsSmart()
+        updateMenuState()
+    }
 
     // ========== SMART - Incognito Mode ==========
     private fun toggleIncognitoModeSmart() {
