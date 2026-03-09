@@ -31,17 +31,20 @@ jobs:
     - name: Build Release APK  
       run: ./gradlew assembleRelease --no-daemon
 
-    - name: Get current date
-      id: date
-      run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+    - name: Get version info
+      id: version
+      run: |
+        echo "version=v1.0.0-$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v1.0.0
-        name: LiteBrowser v1.0.0
+        tag_name: ${{ steps.version.outputs.version }}
+        name: LiteBrowser ${{ steps.version.outputs.version }}
         body: |
           ## LiteBrowser - Lightweight Android Browser
+          Build Date: ${{ steps.version.outputs.date }}
 
           ### Features
           - Full Tab Management (up to 10 tabs)
