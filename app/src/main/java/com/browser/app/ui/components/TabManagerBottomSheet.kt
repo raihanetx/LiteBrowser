@@ -4,23 +4,18 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -31,12 +26,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.browser.app.model.Tab
 import com.browser.app.viewmodel.BrowserViewModel
@@ -100,39 +95,48 @@ fun TabManagerBottomSheet(
             val columns = 4
             val circleSize = 80.dp
 
-            val rows = (tabs.size + 1 + columns - 1) / columns
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(columns),
+            val totalItems = tabs.size + 1
+            val rows = (totalItems + columns - 1) / columns
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .height(rows * (circleSize + 16.dp)),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(8.dp)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(tabs) { tab ->
-                    TabCircleItem(
-                        tab = tab,
-                        isActive = tab.id == tabs.getOrNull(currentTabIndex)?.id,
-                        circleSize = circleSize,
-                        onClick = {
-                            viewModel.switchTab(tab.id)
-                            onDismiss()
-                        },
-                        onClose = {
-                            viewModel.closeTab(tab.id)
+                for (rowIndex in 0 until rows) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        repeat(columns) { colIndex ->
+                            val index = rowIndex * columns + colIndex
+                            if (index < totalItems) {
+                                if (index < tabs.size) {
+                                    val tab = tabs[index]
+                                    TabCircleItem(
+                                        tab = tab,
+                                        isActive = tab.id == tabs.getOrNull(currentTabIndex)?.id,
+                                        circleSize = circleSize,
+                                        onClick = {
+                                            viewModel.switchTab(tab.id)
+                                            onDismiss()
+                                        },
+                                        onClose = {
+                                            viewModel.closeTab(tab.id)
+                                        }
+                                    )
+                                } else {
+                                    AddTabButton(
+                                        circleSize = circleSize,
+                                        onClick = {
+                                            viewModel.addNewTab()
+                                        }
+                                    )
+                                }
+                            }
                         }
-                    )
-                }
-
-                item {
-                    AddTabButton(
-                        circleSize = circleSize,
-                        onClick = {
-                            viewModel.addNewTab()
-                        }
-                    )
+                    }
                 }
             }
 
@@ -176,9 +180,10 @@ fun TabCircleItem(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (tab.favicon != null) {
+            val favicon = tab.favicon
+            if (favicon != null) {
                 androidx.compose.foundation.Image(
-                    bitmap = tab.favicon.asImageBitmap(),
+                    bitmap = favicon.asImageBitmap(),
                     contentDescription = tab.title,
                     modifier = Modifier
                         .size(48.dp)
