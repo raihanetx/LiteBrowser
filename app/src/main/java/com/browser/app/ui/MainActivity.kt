@@ -394,10 +394,17 @@ class MainActivity : AppCompatActivity() {
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = prefs.isDesktopMode
             tab.webView?.let { wv ->
+                // Change user agent
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
+                }
+                
+                // Inject desktop viewport for better desktop site rendering
+                if (prefs.isDesktopMode) {
+                    val desktopViewJS = "javascript:(function(){var m=document.querySelector('meta[name=\"viewport\"]');if(m)m.setAttribute('content','width=1024,initial-scale=1,maximum-scale=1,user-scalable=yes');else{var m=document.createElement('meta');m.name='viewport';m.content='width=1024,initial-scale=1,maximum-scale=1,user-scalable=yes';document.head.appendChild(m)}})();"
+                    wv.loadUrl(desktopViewJS)
                 }
                 
                 // Reload to get desktop/mobile version
