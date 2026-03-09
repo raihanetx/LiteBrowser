@@ -344,25 +344,24 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Simple native pinch zoom ==========
+    // ========== ZOOM - Browser zoom as per article ==========
+    // Browser zoom: zooms entire webpage (text + images + everything)
+    // This is enabled natively by WebView's pinch-to-zoom
+    
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Just update the slider display - pinch-to-zoom works natively
-        // No need to do anything else - WebView handles zoom natively
-        showToast("Pinch to zoom - Move slider to set default zoom level")
+        // Browser zoom works via pinch-to-zoom natively
+        // Just save preference - WebView handles zoom automatically
+        showToast("Pinch to zoom in/out - slider shows zoom level")
         
         updateMenuState()
     }
 
-    private fun applyZoomJS(webView: WebView, percent: Int) {
-        // Not needed - using native pinch zoom
-    }
-
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        // Ensure pinch zoom is enabled
+        // Ensure browser zoom is enabled
         webView?.settings?.apply {
             builtInZoomControls = true
             displayZoomControls = false
@@ -370,6 +369,24 @@ class MainActivity : AppCompatActivity() {
             useWideViewPort = true
             loadWithOverviewMode = true
         }
+        
+        // Inject viewport that allows zooming (as per article)
+        val viewportJS = """
+            javascript:(function(){
+                var m = document.querySelector('meta[name="viewport"]');
+                if(m){
+                    m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes');
+                }else{
+                    var m = document.createElement('meta');
+                    m.name = 'viewport';
+                    m.content = 'width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes';
+                    document.head.appendChild(m);
+                }
+                // Enable touch-action for pinch zoom (as per article)
+                document.body.style.touchAction = 'manipulation';
+            })();
+        """.trimIndent()
+        webView?.loadUrl(viewportJS)
     }
 
     // ========== DESKTOP MODE - Simple and working ==========
