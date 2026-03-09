@@ -31,11 +31,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -170,7 +169,7 @@ fun TopBar(
                 DropdownMenuItem(
                     text = { Text("Zoom In") },
                     onClick = {
-                        WebViewHolder.getWebView()?.zoomIn()
+                        viewModel.changeZoom(0.25f)
                         showMenu = false
                     },
                     leadingIcon = {
@@ -180,7 +179,7 @@ fun TopBar(
                 DropdownMenuItem(
                     text = { Text("Zoom Out") },
                     onClick = {
-                        WebViewHolder.getWebView()?.zoomOut()
+                        viewModel.changeZoom(-0.25f)
                         showMenu = false
                     },
                     leadingIcon = {

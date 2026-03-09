@@ -123,7 +123,13 @@ class BrowserViewModel : ViewModel() {
         _desktopMode.value = !_desktopMode.value
     }
 
-    fun canGoBack(): Boolean {
+    fun changeZoom(delta: Float) {
+        val currentTab = getCurrentTab()
+        if (currentTab != null) {
+            val newZoom = (currentTab.zoomLevel + delta).coerceIn(0.25f, 5.0f)
+            updateTab(_currentTabIndex.value) { it.copy(zoomLevel = newZoom) }
+        }
+    }
         val currentIndex = _currentTabIndex.value
         return currentIndex in _tabs.value.indices && _tabs.value[currentIndex].url != "about:blank"
     }

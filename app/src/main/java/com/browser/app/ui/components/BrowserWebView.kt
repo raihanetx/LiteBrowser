@@ -28,10 +28,18 @@ fun BrowserWebView(
 
     val currentTab = if (currentIndex in tabs.indices) tabs[currentIndex] else null
     val currentUrl = currentTab?.url ?: ""
+    val currentZoom = currentTab?.zoomLevel ?: 1.0f
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var originalUserAgent by remember { mutableStateOf<String?>(null) }
 
+    // Apply zoom via JavaScript
+    fun applyZoom(wv: WebView, zoom: Float) {
+        val js = "document.body.style.zoom = ${zoom}f;"
+        wv.evaluateJavascript(js, null)
+    }
+
+    // Main setup effect
     DisposableEffect(
         key1 = webView,
         key2 = currentUrl,
@@ -86,6 +94,8 @@ fun BrowserWebView(
                 viewModel.setIsLoading(false)
                 viewModel.setProgress(100)
                 url?.let { viewModel.updateCurrentTabUrl(it) }
+                // Apply current zoom after page load
+                view?.let { applyZoom(it, currentZoom) }
             }
 
             override fun shouldOverrideUrlLoading(
@@ -97,16 +107,14 @@ fun BrowserWebView(
             }
         }
 
-        // Load or reload as needed
+        // Load URL if needed
         if (currentUrl.isNotEmpty() && currentUrl != "about:blank") {
             if (wv.url != currentUrl) {
                 wv.loadUrl(currentUrl)
             } else if (wv.settings.userAgentString != targetUA) {
-                // UA changed but URL same -> reload
                 wv.reload()
             }
         } else if (currentUrl == "about:blank") {
-            // Ensure blank page if needed
             if (wv.url == null || wv.url != "about:blank") {
                 wv.loadDataWithBaseURL(
                     null,
@@ -118,6 +126,16 @@ fun BrowserWebView(
             }
         }
 
+        onDispose { }
+    }
+
+    // Apply zoom when it changes
+    DisposableEffect(webView, currentZoom, currentUrl) {
+        val wv = webView ?: return@DisposableEffect onDispose { }
+        // Only apply if this WebView is showing the current tab's URL
+        if (wv.url == currentUrl || currentUrl == "about:blank") {
+            applyZoom(wv, currentZoom)
+        }
         onDispose { }
     }
 
