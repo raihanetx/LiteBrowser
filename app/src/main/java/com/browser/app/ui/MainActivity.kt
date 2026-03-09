@@ -344,23 +344,34 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Working Implementation ==========
+    // ========== ZOOM ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Apply zoom by reloading the page with new scale
+        // Show toast to confirm zoom is being applied
+        showToast("Applying zoom: $zoomPercent%")
+        
+        // Apply to current tab
         browserManager.getCurrentTab()?.webView?.let { wv ->
+            // Stop current loading
+            wv.stopLoading()
+            
+            // Set initial scale
+            wv.setInitialScale(zoomPercent)
+            
+            // Reload to apply
             if (!wv.url.isNullOrEmpty()) {
-                // Store the zoom before reload
-                val currentUrl = wv.url
-                // Set initial scale before loading
-                wv.setInitialScale(zoomPercent)
-                // Reload to apply
                 wv.reload()
+            } else {
+                // If no URL, load default
+                loadUrl(getString(R.string.default_url))
             }
         }
+        
+        // Update menu state
+        updateMenuState()
     }
 
     private fun applyZoomJS(webView: WebView, percent: Int) {
@@ -384,28 +395,42 @@ class MainActivity : AppCompatActivity() {
 
     // ========== DESKTOP MODE ==========
     private fun toggleDesktopMode() {
-        prefs.isDesktopMode = !prefs.isDesktopMode
+        val newMode = !prefs.isDesktopMode
+        prefs.isDesktopMode = newMode
         
-        // Apply to all tabs by changing userAgent and reloading
+        // Get current URL before reload
+        val currentTab = browserManager.getCurrentTab()
+        val currentUrl = currentTab?.url ?: ""
+        
+        // Apply to all tabs
         browserManager.getAllTabs().forEach { tab ->
-            tab.isDesktopMode = prefs.isDesktopMode
+            tab.isDesktopMode = newMode
             tab.webView?.let { wv ->
+                // Force clear cache before changing
+                wv.clearCache(true)
+                
                 // Change user agent
-                wv.settings.userAgentString = if (prefs.isDesktopMode) {
-                    WebViewFactory.DESKTOP_UA
-                } else {
-                    WebViewFactory.MOBILE_UA
-                }
-                // Reload to fetch desktop/mobile version
+                val ua = if (newMode) WebViewFactory.DESKTOP_UA else WebViewFactory.MOBILE_UA
+                wv.settings.userAgentString = ua
+                
+                // Stop current loading
+                wv.stopLoading()
+                
+                // Reload with new settings
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 }
             }
         }
         
+        // Save state
         saveTabsSmart()
+        
+        // Update menu
         updateMenuState()
-        showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
+        
+        // Show toast
+        showToast(if (newMode) "Desktop Mode ON - Reloading..." else "Desktop Mode OFF - Reloading...")
     }
 
     // ========== SMART - Incognito Mode ==========
