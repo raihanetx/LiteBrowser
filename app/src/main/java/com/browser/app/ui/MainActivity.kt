@@ -344,90 +344,65 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM ==========
+    // ========== ZOOM - Simple native pinch zoom ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        browserManager.getCurrentTab()?.webView?.let { wv ->
-            wv.setInitialScale(zoomPercent)
-            val scale = zoomPercent / 100f
-            val zoomJS = "javascript:(function(){document.body.style.zoom='${scale}';document.body.style.transform='scale(${scale})';document.body.style.transformOrigin='top left';})();"
-            wv.loadUrl(zoomJS)
-        }
+        // Just update the slider display - pinch-to-zoom works natively
+        // No need to do anything else - WebView handles zoom natively
+        showToast("Pinch to zoom - Move slider to set default zoom level")
         
         updateMenuState()
     }
 
     private fun applyZoomJS(webView: WebView, percent: Int) {
-        // Not used - use native zoom
+        // Not needed - using native pinch zoom
     }
 
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        webView?.let { wv ->
-            // Enable pinch-to-zoom
-            wv.settings.apply {
-                useWideViewPort = true
-                loadWithOverviewMode = true
-                builtInZoomControls = true
-                displayZoomControls = false
-                setSupportZoom(true)
-            }
-            // Apply saved zoom on page load
-            wv.setInitialScale(prefs.pageZoom)
+        // Ensure pinch zoom is enabled
+        webView?.settings?.apply {
+            builtInZoomControls = true
+            displayZoomControls = false
+            setSupportZoom(true)
+            useWideViewPort = true
+            loadWithOverviewMode = true
         }
     }
 
-    // ========== DESKTOP MODE ==========
+    // ========== DESKTOP MODE - Simple and working ==========
     private fun toggleDesktopMode() {
-        val newMode = !prefs.isDesktopMode
-        prefs.isDesktopMode = newMode
+        prefs.isDesktopMode = !prefs.isDesktopMode
         
+        // Save current tab URLs
+        val tabUrls = browserManager.getAllTabs().map { it.url }
+        
+        // Destroy all WebViews
         browserManager.getAllTabs().forEach { tab ->
-            tab.isDesktopMode = newMode
-            tab.webView?.let { wv ->
-                wv.stopLoading()
-                
-                val ua = if (newMode) WebViewFactory.DESKTOP_UA else WebViewFactory.MOBILE_UA
-                wv.settings.userAgentString = ua
-                
-                if (newMode) {
-                    val desktopViewJS = """
-                        javascript:(function(){
-                            var m = document.querySelector('meta[name="viewport"]');
-                            if(m){
-                                m.setAttribute('content', 'width=1280, initial-scale=0.8, maximum-scale=5.0, user-scalable=yes');
-                            }else{
-                                var m = document.createElement('meta');
-                                m.name = 'viewport';
-                                m.content = 'width=1280, initial-scale=0.8, maximum-scale=5.0, user-scalable=yes';
-                                document.head.appendChild(m);
-                            }
-                        })();
-                    """.trimIndent()
-                    wv.loadUrl(desktopViewJS)
-                } else {
-                    val mobileViewJS = """
-                        javascript:(function(){
-                            var m = document.querySelector('meta[name="viewport"]');
-                            if(m){
-                                m.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes');
-                            }
-                        })();
-                    """.trimIndent()
-                    wv.loadUrl(mobileViewJS)
-                }
-                
-                if (!wv.url.isNullOrEmpty()) {
-                    wv.reload()
-                }
+            tab.webView?.destroy()
+        }
+        webViewContainer.removeAllViews()
+        browserManager.clearAllTabs()
+        
+        // Recreate tabs with new user agent
+        tabUrls.forEachIndexed { index, url ->
+            createNewTab(loadUrlNow = false)
+            if (url.isNotEmpty()) {
+                browserManager.getCurrentTab()?.url = url
+                browserManager.getCurrentTab()?.webView?.loadUrl(url)
             }
+        }
+        
+        if (browserManager.getAllTabs().isEmpty()) {
+            createNewTab(true)
         }
         
         saveTabsSmart()
         updateMenuState()
-        showToast(if (newMode) "Desktop Mode ON - Reloading..." else "Desktop Mode OFF - Reloading...")
+        
+        showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
     }
 
     // ========== SMART - Incognito Mode ==========
