@@ -28,12 +28,14 @@ fun BrowserWebView(
     val desktopMode by viewModel.desktopMode.collectAsState()
 
     var webViewState by remember { mutableStateOf<WebView?>(null) }
+    var originalUserAgent by remember { mutableStateOf<String?>(null) }
 
-    val currentUrl = if (currentIndex in currentTab.indices) currentTab[currentIndex].url else ""
+    val currentTabObj = if (currentIndex in currentTab.indices) currentTab[currentIndex] else null
+    val currentUrl = currentTabObj?.url ?: ""
 
     DisposableEffect(
-        key1 = currentUrl,
-        key2 = nightMode,
+        key1 = webViewState,
+        key2 = currentUrl,
         key3 = desktopMode
     ) {
         webViewState?.apply {
@@ -45,12 +47,18 @@ fun BrowserWebView(
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
 
-            val userAgent = if (desktopMode) {
-                settings.userAgentString.replace("Mobile", "")
-            } else {
-                settings.userAgentString
+            // Store original UA on first run
+            if (originalUserAgent == null) {
+                originalUserAgent = settings.userAgentString
             }
-            settings.userAgentString = userAgent
+
+            // Apply desktop mode UA
+            val baseUA = originalUserAgent ?: settings.userAgentString
+            settings.userAgentString = if (desktopMode) {
+                baseUA.replace("Mobile", "")
+            } else {
+                baseUA
+            }
 
             webChromeClient = object : WebChromeClient() {
                 override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -76,6 +84,8 @@ fun BrowserWebView(
                 override fun onPageFinished(view: WebView?, url: String?) {
                     viewModel.setIsLoading(false)
                     viewModel.setProgress(100)
+                    // Update tab URL to the loaded URL
+                    url?.let { viewModel.updateCurrentTabUrl(it) }
                 }
 
                 override fun shouldOverrideUrlLoading(
@@ -89,8 +99,14 @@ fun BrowserWebView(
                 }
             }
 
+            // Load URL if needed
             if (currentUrl.isNotEmpty() && currentUrl != "about:blank") {
-                loadUrl(currentUrl)
+                if (url != currentUrl) {
+                    loadUrl(currentUrl)
+                } else {
+                    // Same URL but desktop mode may have changed
+                    reload()
+                }
             } else if (currentUrl == "about:blank") {
                 loadDataWithBaseURL(
                     null,
@@ -117,10 +133,7 @@ fun BrowserWebView(
         },
         update = { webView ->
             WebViewHolder.setWebView(webView)
-
-            if (currentUrl.isNotEmpty() && currentUrl != webView.url && currentUrl != "about:blank") {
-                webView.loadUrl(currentUrl)
-            }
+            // Removed auto-reload to prevent overriding user navigation
         }
     )
 
