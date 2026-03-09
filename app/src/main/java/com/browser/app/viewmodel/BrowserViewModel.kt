@@ -32,6 +32,9 @@ class BrowserViewModel : ViewModel() {
     private val _desktopMode = MutableStateFlow(false)
     val desktopMode: StateFlow<Boolean> = _desktopMode.asStateFlow()
 
+    private val _zoomLevel = MutableStateFlow(1.0f)
+    val zoomLevel: StateFlow<Float> = _zoomLevel.asStateFlow()
+
     init {
         addNewTab()
     }
@@ -128,10 +131,7 @@ class BrowserViewModel : ViewModel() {
         _zoomLevel.value = newZoom
     }
 
-    fun getCurrentZoom(): Float = _zoomLevel.value
-
-    private val _zoomLevel = MutableStateFlow(1.0f)
-    val zoomLevel: StateFlow<Float> = _zoomLevel.asStateFlow()
+    fun canGoBack(): Boolean {
         val currentIndex = _currentTabIndex.value
         return currentIndex in _tabs.value.indices && _tabs.value[currentIndex].url != "about:blank"
     }
