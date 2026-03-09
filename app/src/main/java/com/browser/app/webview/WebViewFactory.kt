@@ -33,25 +33,15 @@ object WebViewFactory {
      */
     fun createWebView(context: Context, isDesktopMode: Boolean = false, isIncognito: Boolean = false, blockThirdPartyCookies: Boolean = false): WebView {
         val webView = WebView(context).apply {
-            // Use hardware layer for better performance
             setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
         }
         
-        // Set cookie manager based on third-party blocking preference
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
             if (blockThirdPartyCookies) {
-                try {
-                    setAcceptThirdPartyCookies(webView, false)
-                } catch (e: Exception) {
-                    // Some Android versions don't support this
-                }
+                try { setAcceptThirdPartyCookies(webView, false) } catch (e: Exception) {}
             } else {
-                try {
-                    setAcceptThirdPartyCookies(webView, true)
-                } catch (e: Exception) {
-                    // Some Android versions don't support this
-                }
+                try { setAcceptThirdPartyCookies(webView, true) } catch (e: Exception) {}
             }
         }
         
@@ -61,16 +51,11 @@ object WebViewFactory {
             databaseEnabled = !isIncognito
             cacheMode = if (isIncognito) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
             
-            // Viewport settings - use default, don't override with JS
             useWideViewPort = true
             loadWithOverviewMode = true
-            
-            // NATIVE zoom controls - the key fix!
             builtInZoomControls = true
             displayZoomControls = false
             setSupportZoom(true)
-            
-            // Zoom limits - allow smooth zoom from 25% to 400%
             
             setSupportMultipleWindows(false)
             allowFileAccess = true

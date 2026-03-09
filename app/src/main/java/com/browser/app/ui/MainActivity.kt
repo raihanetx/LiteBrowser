@@ -11,6 +11,7 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.CookieManager
 import android.webkit.WebViewClient
@@ -344,36 +345,33 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Super simple ==========
+    // ========== ZOOM - FORCE APPLY ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
         try {
-            val wv = browserManager.getCurrentTab()?.webView
-            if (wv != null) {
-                // Get current URL
-                val currentUrl = wv.url
-                if (!currentUrl.isNullOrEmpty()) {
-                    // Clear and reload with new settings
-                    wv.clearCache(true)
-                    wv.settings.javaScriptEnabled = true
-                    wv.settings.useWideViewPort = true
-                    wv.settings.loadWithOverviewMode = true
-                    wv.settings.builtInZoomControls = true
-                    wv.settings.setSupportZoom(true)
-                    
-                    // Reload
+            val tab = browserManager.getCurrentTab()
+            if (tab != null && tab.webView != null) {
+                val wv = tab.webView!!
+                
+                wv.settings.apply {
+                useWideViewPort = true
+                loadWithOverviewMode = true
+                builtInZoomControls = true
+                displayZoomControls = false
+                setSupportZoom(true)
+            }
+                
+                if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
-                    showToast("Zoom: $zoomPercent% - Reloading...")
                 } else {
-                    // Load default URL with zoom
                     wv.loadUrl(getString(R.string.default_url))
-                    showToast("Zoom: $zoomPercent% - Loading...")
                 }
+                showToast("Zoom: $zoomPercent%")
             } else {
-                showToast("No webview found")
+                showToast("No page loaded")
             }
         } catch (e: Exception) {
             showToast("Error: ${e.message}")
@@ -383,42 +381,44 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
-        // Just ensure zoom is enabled
         webView?.settings?.apply {
-            builtInZoomControls = true
-            setSupportZoom(true)
             useWideViewPort = true
             loadWithOverviewMode = true
+            builtInZoomControls = true
+            displayZoomControls = false
+            setSupportZoom(true)
         }
     }
 
-    // ========== DESKTOP MODE - Super simple ==========
+    // ========== DESKTOP MODE - FORCE APPLY ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         try {
-            val wv = browserManager.getCurrentTab()?.webView
-            if (wv != null) {
-                // Change user agent
-                wv.settings.javaScriptEnabled = true
+            val tab = browserManager.getCurrentTab()
+            if (tab != null && tab.webView != null) {
+                val wv = tab.webView!!
+                
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
                 }
                 
-                // Get current URL and reload
-                val currentUrl = wv.url
-                if (!currentUrl.isNullOrEmpty()) {
-                    wv.clearCache(true)
+                wv.settings.apply {
+                    builtInZoomControls = true
+                    setSupportZoom(true)
+                }
+                
+                if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
-                    showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
                 } else {
                     wv.loadUrl(getString(R.string.default_url))
-                    showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
                 }
+                
+                showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
             } else {
-                showToast("No webview found")
+                showToast("No page loaded")
             }
         } catch (e: Exception) {
             showToast("Error: ${e.message}")
