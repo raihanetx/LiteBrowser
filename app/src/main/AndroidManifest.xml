@@ -10,7 +10,7 @@
     <application
         android:name=".BrowserApp"
         android:allowBackup="true"
-        android:label="LiteBrowser"
+        android:label="Evenly"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
