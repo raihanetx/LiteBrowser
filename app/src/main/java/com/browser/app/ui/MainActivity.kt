@@ -338,6 +338,7 @@ class MainActivity : AppCompatActivity() {
         }
         
         browserManager.getCurrentTab()?.apply {
+            webView?.setInitialScale(prefs.pageZoom)
             webView?.loadUrl(url)
             this.url = url
         }
@@ -345,25 +346,19 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - FORCE APPLY ==========
+    // ========== ZOOM - Working ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
         try {
-            val tab = browserManager.getCurrentTab()
-            if (tab != null && tab.webView != null) {
-                val wv = tab.webView!!
+            val wv = browserManager.getCurrentTab()?.webView
+            if (wv != null) {
+                // CRITICAL: Set initial scale BEFORE reloading
+                wv.setInitialScale(zoomPercent)
                 
-                wv.settings.apply {
-                useWideViewPort = true
-                loadWithOverviewMode = true
-                builtInZoomControls = true
-                displayZoomControls = false
-                setSupportZoom(true)
-            }
-                
+                // Reload to apply
                 if (!wv.url.isNullOrEmpty()) {
                     wv.reload()
                 } else {
@@ -371,10 +366,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 showToast("Zoom: $zoomPercent%")
             } else {
-                showToast("No page loaded")
+                showToast("No page")
             }
         } catch (e: Exception) {
-            showToast("Error: ${e.message}")
+            showToast("Error")
         }
         
         updateMenuState()
@@ -390,43 +385,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ========== DESKTOP MODE - FORCE APPLY ==========
+    // ========== DESKTOP MODE - Working ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
         try {
-            val tab = browserManager.getCurrentTab()
-            if (tab != null && tab.webView != null) {
-                val wv = tab.webView!!
-                
+            val wv = browserManager.getCurrentTab()?.webView
+            if (wv != null) {
+                // Change user agent
                 wv.settings.userAgentString = if (prefs.isDesktopMode) {
                     WebViewFactory.DESKTOP_UA
                 } else {
                     WebViewFactory.MOBILE_UA
-                }
-                
-                wv.settings.apply {
-                    builtInZoomControls = true
-                    setSupportZoom(true)
-                }
-                
-                if (!wv.url.isNullOrEmpty()) {
-                    wv.reload()
-                } else {
-                    wv.loadUrl(getString(R.string.default_url))
-                }
+                 }
+                 
+                 // Reload to apply
+                 wv.setInitialScale(prefs.pageZoom)
+                 if (!wv.url.isNullOrEmpty()) {
+                     wv.reload()
+                 } else {
+                     wv.loadUrl(getString(R.string.default_url))
+                 }
                 
                 showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
             } else {
-                showToast("No page loaded")
+                showToast("No webview")
             }
         } catch (e: Exception) {
-            showToast("Error: ${e.message}")
+            showToast("Error")
         }
         
-        saveTabsSmart()
-        updateMenuState()
-    }
+         saveTabsSmart()
+         updateMenuState()
+     }
 
     // ========== SMART - Incognito Mode ==========
     private fun toggleIncognitoModeSmart() {
@@ -794,11 +785,12 @@ class MainActivity : AppCompatActivity() {
             webViewContainer.addView(webView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             browserManager.addTab(tab)
         }
-        
+
         val currentTab = if (savedCurrentTabId >= 0) browserManager.getTab(savedCurrentTabId) else browserManager.getCurrentTab()
         currentTab?.let { 
             showTab(it.id) 
             if (it.url.isNotEmpty()) {
+                it.webView?.setInitialScale(prefs.pageZoom)
                 it.webView?.loadUrl(it.url)
             }
         }
