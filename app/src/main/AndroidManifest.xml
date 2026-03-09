@@ -11,6 +11,7 @@
         android:name=".BrowserApp"
         android:allowBackup="true"
         android:label="Evenly"
+        android:icon="@mipmap/ic_launcher"
         android:hardwareAccelerated="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
