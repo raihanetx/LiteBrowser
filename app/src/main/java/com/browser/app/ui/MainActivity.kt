@@ -144,17 +144,20 @@ class MainActivity : AppCompatActivity() {
             drawerLayout.closeDrawers()
         }
         
-        // Zoom SeekBar - DON'T TOUCH
+        // Zoom SeekBar
         zoomSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (fromUser) {
                     val zoomPercent = progress.coerceIn(ZOOM_MIN, ZOOM_MAX)
-                    applyPageZoom(zoomPercent)
                     zoomPercentage.text = "$zoomPercent%"
                 }
             }
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                val progress = seekBar?.progress ?: 100
+                val zoomPercent = progress.coerceIn(ZOOM_MIN, ZOOM_MAX)
+                applyPageZoom(zoomPercent)
+            }
         })
         
         findViewById<ImageButton>(R.id.menuBack).setOnClickListener { browserManager.getCurrentTab()?.webView?.goBack() }
@@ -341,30 +344,32 @@ class MainActivity : AppCompatActivity() {
         tabSlider.isVisible = false
     }
 
-    // ========== ZOOM - Native WebView zoom ==========
+    // ========== ZOOM - Working Implementation ==========
     private fun applyPageZoom(percent: Int) {
         val zoomPercent = percent.coerceIn(ZOOM_MIN, ZOOM_MAX)
         prefs.pageZoom = zoomPercent
         zoomPercentage.text = "$zoomPercent%"
         
-        // Apply zoom using setInitialScale - this is the native way that works!
+        // Apply zoom by reloading the page with new scale
         browserManager.getCurrentTab()?.webView?.let { wv ->
-            wv.setInitialScale(zoomPercent)
-            // Also reload to apply properly
             if (!wv.url.isNullOrEmpty()) {
+                // Store the zoom before reload
+                val currentUrl = wv.url
+                // Set initial scale before loading
+                wv.setInitialScale(zoomPercent)
+                // Reload to apply
                 wv.reload()
             }
         }
     }
 
     private fun applyZoomJS(webView: WebView, percent: Int) {
-        // Don't use JavaScript zoom - it causes layout issues
-        // Use native setInitialScale instead
+        // Not used - use native zoom
     }
 
     private fun applyPageZoomJS(webView: WebView?, percent: Int) {
         webView?.let { wv ->
-            // Apply zoom using native method
+            // Enable pinch-to-zoom
             wv.settings.apply {
                 useWideViewPort = true
                 loadWithOverviewMode = true
@@ -372,38 +377,33 @@ class MainActivity : AppCompatActivity() {
                 displayZoomControls = false
                 setSupportZoom(true)
             }
-            // Set initial scale - this is what actually zooms the page properly
+            // Apply saved zoom on page load
             wv.setInitialScale(prefs.pageZoom)
         }
     }
 
-    // ========== DESKTOP MODE - Simple and working ==========
+    // ========== DESKTOP MODE ==========
     private fun toggleDesktopMode() {
         prefs.isDesktopMode = !prefs.isDesktopMode
         
-        // Recreate all tabs with new user agent
+        // Apply to all tabs by changing userAgent and reloading
         browserManager.getAllTabs().forEach { tab ->
             tab.isDesktopMode = prefs.isDesktopMode
+            tab.webView?.let { wv ->
+                // Change user agent
+                wv.settings.userAgentString = if (prefs.isDesktopMode) {
+                    WebViewFactory.DESKTOP_UA
+                } else {
+                    WebViewFactory.MOBILE_UA
+                }
+                // Reload to fetch desktop/mobile version
+                if (!wv.url.isNullOrEmpty()) {
+                    wv.reload()
+                }
+            }
         }
         
-        // Save and recreate tabs with new settings
         saveTabsSmart()
-        
-        // Close all current tabs and recreate
-        val currentUrl = browserManager.getCurrentTab()?.url ?: ""
-        webViewContainer.removeAllViews()
-        
-        browserManager.getAllTabs().forEach { tab ->
-            tab.webView?.destroy()
-        }
-        browserManager.clearAllTabs()
-        
-        // Create new tab with desktop/mobile settings
-        createNewTab(false)
-        if (currentUrl.isNotEmpty()) {
-            loadUrl(currentUrl)
-        }
-        
         updateMenuState()
         showToast(if (prefs.isDesktopMode) "Desktop Mode ON" else "Desktop Mode OFF")
     }
