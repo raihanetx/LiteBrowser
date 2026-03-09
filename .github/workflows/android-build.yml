@@ -19,46 +19,17 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+
     - name: Grant execute permission for gradlew
-      run: chmod +x gradlew || true
+      run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: ./gradlew assembleDebug || gradle assembleDebug
+      run: ./gradlew assembleDebug --no-daemon
 
-    - name: Build Release APK
-      run: ./gradlew assembleRelease || gradle assembleRelease
-
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
-
-    - name: Upload Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release
-        path: app/build/outputs/apk/release/app-release.apk
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Download Debug APK
-      uses: actions/download-artifact@v4
-      with:
-        name: app-debug
-        path: ./apk
-
-    - name: Download Release APK
-      uses: actions/download-artifact@v4
-      with:
-        name: app-release
-        path: ./apk
+    - name: Build Release APK  
+      run: ./gradlew assembleRelease --no-daemon
 
     - name: Get current date
       id: date
@@ -67,8 +38,8 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v1.0.0-${{ steps.date.outputs.date }}
-        name: LiteBrowser v1.0.0 - ${{ steps.date.outputs.date }}
+        tag_name: v1.0.0
+        name: LiteBrowser v1.0.0
         body: |
           ## LiteBrowser - Lightweight Android Browser
 
@@ -79,15 +50,13 @@ jobs:
           - Third-Party Cookie Blocking
           - Per-Site Cookie Viewer/Deleter
 
-          ### Downloads
-          - `app-debug.apk` - Debug build (signed with debug key)
-          - `app-release.apk` - Release build
-
           ### Installation
           1. Download the APK
           2. Enable "Install from unknown sources" in your Android settings
           3. Open the APK and install
-        files: ./apk/*.apk
+        files: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/release/app-release.apk
         draft: false
         prerelease: false
       env:
