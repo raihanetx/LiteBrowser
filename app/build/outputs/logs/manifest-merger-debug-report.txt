@@ -12,10 +12,9 @@ MERGED from [androidx.activity:activity-compose:1.8.1] /home/user/.gradle/caches
 MERGED from [androidx.compose.material:material-ripple-android:1.5.4] /home/user/.gradle/caches/transforms-3/9b69a2cdc0def1a0de899da0397efd89/transformed/jetified-material-ripple-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.material:material-icons-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b824ff17177278f569b79719761a547/transformed/jetified-material-icons-core-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.material:material-icons-extended-android:1.5.4] /home/user/.gradle/caches/transforms-3/a3c7bfaf9ef007333e03e4ee8332e168/transformed/jetified-material-icons-extended-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.animation:animation-android:1.5.4] /home/user/.gradle/caches/transforms-3/ea599cf3f7fdceb6c298483177992c95/transformed/jetified-animation-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.foundation:foundation-layout-android:1.5.4] /home/user/.gradle/caches/transforms-3/7a5bfb20fa4f7d12b6845530b20ec68b/transformed/jetified-foundation-layout-release/AndroidManifest.xml:2:1-7:12
-MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-unit-android:1.5.4] /home/user/.gradle/caches/transforms-3/5f79414ab281920eaf6e8a503775b7e2/transformed/jetified-ui-unit-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-geometry-android:1.5.4] /home/user/.gradle/caches/transforms-3/06cc08e08aa3590583f1969187323267/transformed/jetified-ui-geometry-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.compose.ui:ui-util-android:1.5.4] /home/user/.gradle/caches/transforms-3/0b5aa3711c89920e0ff354528740d64f/transformed/jetified-ui-util-release/AndroidManifest.xml:2:1-7:12
@@ -38,6 +37,7 @@ MERGED from [androidx.lifecycle:lifecycle-runtime:2.6.2] /home/user/.gradle/cach
 MERGED from [androidx.lifecycle:lifecycle-runtime-ktx:2.6.2] /home/user/.gradle/caches/transforms-3/5617c9fa62d29bab35159dc14d6378c4/transformed/jetified-lifecycle-runtime-ktx-2.6.2/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2] /home/user/.gradle/caches/transforms-3/4da998453d07529e0d1566a5288ffdca/transformed/jetified-lifecycle-viewmodel-compose-2.6.2/AndroidManifest.xml:17:1-22:12
 MERGED from [androidx.compose.ui:ui-android:1.5.4] /home/user/.gradle/caches/transforms-3/c445649ef0d800cf4f65d08d60ded344/transformed/jetified-ui-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.autofill:autofill:1.0.0] /home/user/.gradle/caches/transforms-3/dbc3d78ad7db42ec93bf4b6deb4190f3/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.core:core:1.12.0] /home/user/.gradle/caches/transforms-3/97415b8e2c2b19b88cea32d17b874052/transformed/core-1.12.0/AndroidManifest.xml:17:1-30:12
 MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/user/.gradle/caches/transforms-3/448874dadaaa81f1196303a4e16bc2c4/transformed/jetified-customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
@@ -142,14 +142,12 @@ MERGED from [androidx.compose.material:material-icons-core-android:1.5.4] /home/
 MERGED from [androidx.compose.material:material-icons-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b824ff17177278f569b79719761a547/transformed/jetified-material-icons-core-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.material:material-icons-extended-android:1.5.4] /home/user/.gradle/caches/transforms-3/a3c7bfaf9ef007333e03e4ee8332e168/transformed/jetified-material-icons-extended-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.material:material-icons-extended-android:1.5.4] /home/user/.gradle/caches/transforms-3/a3c7bfaf9ef007333e03e4ee8332e168/transformed/jetified-material-icons-extended-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.animation:animation-android:1.5.4] /home/user/.gradle/caches/transforms-3/ea599cf3f7fdceb6c298483177992c95/transformed/jetified-animation-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.animation:animation-android:1.5.4] /home/user/.gradle/caches/transforms-3/ea599cf3f7fdceb6c298483177992c95/transformed/jetified-animation-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.foundation:foundation-layout-android:1.5.4] /home/user/.gradle/caches/transforms-3/7a5bfb20fa4f7d12b6845530b20ec68b/transformed/jetified-foundation-layout-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.foundation:foundation-layout-android:1.5.4] /home/user/.gradle/caches/transforms-3/7a5bfb20fa4f7d12b6845530b20ec68b/transformed/jetified-foundation-layout-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:5:5-44
-MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.5.4] /home/user/.gradle/caches/transforms-3/51ed31da3382626ffaedc77f4286a143/transformed/jetified-animation-core-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-unit-android:1.5.4] /home/user/.gradle/caches/transforms-3/5f79414ab281920eaf6e8a503775b7e2/transformed/jetified-ui-unit-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-unit-android:1.5.4] /home/user/.gradle/caches/transforms-3/5f79414ab281920eaf6e8a503775b7e2/transformed/jetified-ui-unit-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-geometry-android:1.5.4] /home/user/.gradle/caches/transforms-3/06cc08e08aa3590583f1969187323267/transformed/jetified-ui-geometry-release/AndroidManifest.xml:5:5-44
@@ -194,6 +192,8 @@ MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2] /home/user/.g
 MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2] /home/user/.gradle/caches/transforms-3/4da998453d07529e0d1566a5288ffdca/transformed/jetified-lifecycle-viewmodel-compose-2.6.2/AndroidManifest.xml:20:5-44
 MERGED from [androidx.compose.ui:ui-android:1.5.4] /home/user/.gradle/caches/transforms-3/c445649ef0d800cf4f65d08d60ded344/transformed/jetified-ui-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.compose.ui:ui-android:1.5.4] /home/user/.gradle/caches/transforms-3/c445649ef0d800cf4f65d08d60ded344/transformed/jetified-ui-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.5.4] /home/user/.gradle/caches/transforms-3/6b141931f5cb43c22af36cc9de0615a2/transformed/jetified-foundation-release/AndroidManifest.xml:5:5-44
 MERGED from [androidx.autofill:autofill:1.0.0] /home/user/.gradle/caches/transforms-3/dbc3d78ad7db42ec93bf4b6deb4190f3/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.autofill:autofill:1.0.0] /home/user/.gradle/caches/transforms-3/dbc3d78ad7db42ec93bf4b6deb4190f3/transformed/jetified-autofill-1.0.0/AndroidManifest.xml:20:5-22:41
 MERGED from [androidx.core:core:1.12.0] /home/user/.gradle/caches/transforms-3/97415b8e2c2b19b88cea32d17b874052/transformed/core-1.12.0/AndroidManifest.xml:20:5-44

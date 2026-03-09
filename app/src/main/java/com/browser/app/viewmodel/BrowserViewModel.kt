@@ -44,12 +44,14 @@ class BrowserViewModel : ViewModel() {
         )
         _tabs.value = _tabs.value + newTab
         _currentTabIndex.value = _tabs.value.size - 1
+        _searchQuery.value = ""
     }
 
     fun closeTab(tabId: Int) {
         val currentList = _tabs.value.toMutableList()
         val index = currentList.indexOfFirst { it.id == tabId }
         if (index != -1) {
+            val closingCurrent = index == _currentTabIndex.value
             currentList.removeAt(index)
             if (currentList.isEmpty()) {
                 addNewTab()
@@ -60,6 +62,9 @@ class BrowserViewModel : ViewModel() {
                     _currentTabIndex.value
                 }
                 _currentTabIndex.value = newIndex
+                if (closingCurrent) {
+                    _searchQuery.value = ""
+                }
             }
             _tabs.value = currentList
         }
@@ -70,6 +75,7 @@ class BrowserViewModel : ViewModel() {
         if (index != -1) {
             _currentTabIndex.value = index
             _showTabManager.value = false
+            _searchQuery.value = ""
         }
     }
 
