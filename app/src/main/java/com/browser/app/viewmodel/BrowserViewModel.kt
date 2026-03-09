@@ -32,9 +32,6 @@ class BrowserViewModel : ViewModel() {
     private val _desktopMode = MutableStateFlow(false)
     val desktopMode: StateFlow<Boolean> = _desktopMode.asStateFlow()
 
-    private val _zoomLevel = MutableStateFlow(1.0f)
-    val zoomLevel: StateFlow<Float> = _zoomLevel.asStateFlow()
-
     init {
         addNewTab()
     }
@@ -124,11 +121,6 @@ class BrowserViewModel : ViewModel() {
 
     fun toggleDesktopMode() {
         _desktopMode.value = !_desktopMode.value
-    }
-
-    fun changeZoom(delta: Float) {
-        val newZoom = (_zoomLevel.value + delta).coerceIn(0.25f, 5.0f)
-        _zoomLevel.value = newZoom
     }
 
     fun canGoBack(): Boolean {

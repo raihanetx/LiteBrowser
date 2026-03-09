@@ -2,7 +2,6 @@ package com.browser.app.ui.components
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -12,37 +11,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.browser.app.util.WebViewHolder
-import com.browser.app.viewmodel.BrowserViewModel
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun BrowserWebView(
-    viewModel: BrowserViewModel = viewModel(),
+    viewModel: com.browser.app.viewmodel.BrowserViewModel,
     modifier: Modifier = Modifier
 ) {
     val tabs by viewModel.tabs.collectAsState()
     val currentIndex by viewModel.currentTabIndex.collectAsState()
     val desktopMode by viewModel.desktopMode.collectAsState()
-    val zoomLevel by viewModel.zoomLevel.collectAsState()
 
     val currentTab = if (currentIndex in tabs.indices) tabs[currentIndex] else null
     val currentUrl = currentTab?.url ?: ""
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var originalUserAgent by remember { mutableStateOf<String?>(null) }
-
-    // Apply native zoom using WebView.zoomBy
-    fun applyNativeZoom(wv: WebView, targetZoom: Float) {
-        val currentScale = wv.scale
-        if (currentScale != 0f) {
-            val factor = targetZoom / currentScale
-            // Clamp factor to WebView limits (0.25 to 5.0)
-            val clampedFactor = factor.coerceIn(0.25f, 5.0f)
-            wv.zoomBy(clampedFactor)
-        }
-    }
 
     DisposableEffect(
         key1 = webView,
@@ -51,7 +36,6 @@ fun BrowserWebView(
     ) {
         val wv = webView ?: return@DisposableEffect onDispose { }
 
-        // Configure settings
         wv.settings.javaScriptEnabled = true
         wv.settings.domStorageEnabled = true
         wv.settings.loadWithOverviewMode = true
@@ -60,12 +44,10 @@ fun BrowserWebView(
         wv.settings.builtInZoomControls = true
         wv.settings.displayZoomControls = false
 
-        // Remember original UA
         if (originalUserAgent == null) {
             originalUserAgent = wv.settings.userAgentString
         }
 
-        // Apply desktop mode UA
         val baseUA = originalUserAgent ?: wv.settings.userAgentString
         val targetUA = if (desktopMode) baseUA.replace("Mobile", "") else baseUA
         if (wv.settings.userAgentString != targetUA) {
@@ -97,8 +79,6 @@ fun BrowserWebView(
                 viewModel.setIsLoading(false)
                 viewModel.setProgress(100)
                 url?.let { viewModel.updateCurrentTabUrl(it) }
-                // Apply zoom after page loads
-                view?.let { applyNativeZoom(it, zoomLevel) }
             }
 
             override fun shouldOverrideUrlLoading(
@@ -110,7 +90,6 @@ fun BrowserWebView(
             }
         }
 
-        // Load URL if needed
         if (currentUrl.isNotEmpty() && currentUrl != "about:blank") {
             if (wv.url != currentUrl) {
                 wv.loadUrl(currentUrl)
@@ -129,13 +108,6 @@ fun BrowserWebView(
             }
         }
 
-        onDispose { }
-    }
-
-    // Apply zoom when it changes
-    DisposableEffect(webView, zoomLevel) {
-        val wv = webView ?: return@DisposableEffect onDispose { }
-        applyNativeZoom(wv, zoomLevel)
         onDispose { }
     }
 

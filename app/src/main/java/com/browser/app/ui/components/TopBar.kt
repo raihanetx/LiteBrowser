@@ -169,7 +169,7 @@ fun TopBar(
                 DropdownMenuItem(
                     text = { Text("Zoom In") },
                     onClick = {
-                        viewModel.changeZoom(0.25f)
+                        WebViewHolder.getWebView()?.zoomIn()
                         showMenu = false
                     },
                     leadingIcon = {
@@ -179,7 +179,7 @@ fun TopBar(
                 DropdownMenuItem(
                     text = { Text("Zoom Out") },
                     onClick = {
-                        viewModel.changeZoom(-0.25f)
+                        WebViewHolder.getWebView()?.zoomOut()
                         showMenu = false
                     },
                     leadingIcon = {
