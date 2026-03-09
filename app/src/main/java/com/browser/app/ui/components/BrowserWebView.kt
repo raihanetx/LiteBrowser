@@ -25,8 +25,6 @@ fun BrowserWebView(
     val tabs by viewModel.tabs.collectAsState()
     val currentIndex by viewModel.currentTabIndex.collectAsState()
     val desktopMode by viewModel.desktopMode.collectAsState()
-    val currentTab = if (currentIndex in tabs.indices) tabs[currentIndex] else null
-    val currentUrl = currentTab?.url ?: ""
 
     var webView by remember { mutableStateOf<WebView?>(null) }
     var originalUserAgent by remember { mutableStateOf<String?>(null) }
