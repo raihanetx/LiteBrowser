@@ -8,10 +8,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.browser.app.ui.BrowserTheme
+import com.browser.app.ui.theme.BrowserTheme
 import com.browser.app.ui.components.BottomNavigationBar
 import com.browser.app.ui.components.BrowserWebView
 import com.browser.app.ui.components.TabManagerBottomSheet
