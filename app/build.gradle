@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.example.lightweightbrowser'
+    namespace 'com.litebrowser.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.example.lightweightbrowser"
+        applicationId "com.litebrowser.app"
         minSdk 21
         targetSdk 34
         versionCode 1

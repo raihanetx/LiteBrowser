@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.litebrowser.app
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment

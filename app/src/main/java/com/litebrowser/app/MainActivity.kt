@@ -1,4 +1,4 @@
-package com.example.lightweightbrowser
+package com.litebrowser.app
 
 import android.annotation.SuppressLint
 import android.content.Context
