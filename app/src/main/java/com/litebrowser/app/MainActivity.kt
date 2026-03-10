@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,17 +14,21 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.webkit.CookieManager
 import android.webkit.WebSettings
+import android.webkit.WebView
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class MainActivity : AppCompatActivity() {
 
-    // UI Components
+    // UI
     private lateinit var urlEditText: EditText
     private lateinit var tabButton: FrameLayout
     private lateinit var tabBadge: TextView
@@ -31,51 +36,34 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadingProgress: View
     private lateinit var viewPager: ViewPager2
 
-    // Adapter & Tab URLs
-    private lateinit var adapter: TabAdapter
+    // Data
     private val tabUrls = mutableListOf<String>()
+    private lateinit var pagerAdapter: TabPagerAdapter
 
     // Settings
     private lateinit var prefs: SharedPreferences
     private lateinit var cookieManager: CookieManager
-    private lateinit var defaultUserAgent: String
+    private var defaultUserAgent: String = ""
 
-    // Constants
-    private val MAX_TABS = 10
-    private val SAVED_TABS = "saved_tabs"
+    companion object {
+        private const val MAX_TABS = 10
+        private const val PREFS_NAME = "browser_prefs"
+        private const val KEY_DESKTOP_MODE = "desktop_mode"
+        private const val KEY_BLOCK_THIRD_PARTY = "block_third_party"
+    }
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        bindViews()
-
-        prefs = getSharedPreferences("browser_prefs", Context.MODE_PRIVATE)
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         defaultUserAgent = WebSettings.getDefaultUserAgent(this)
 
-        // Restore or create tabs
-        if (savedInstanceState != null) {
-            val savedUrls = savedInstanceState.getStringArrayList(SAVED_TABS)
-            savedUrls?.forEach { tabUrls.add(it) }
-        }
-        if (tabUrls.isEmpty()) {
-            tabUrls.add("https://www.google.com")
-        }
-
-        adapter = TabAdapter(this, tabUrls)
-        viewPager.adapter = adapter
-        viewPager.offscreenPageLimit = MAX_TABS
-
-        updateTabBadge()
-        setupListeners()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putStringArrayList(SAVED_TABS, ArrayList(tabUrls))
+        bindViews()
+        setupViewPager()
+        setupClickListeners()
     }
 
     private fun bindViews() {
@@ -87,13 +75,24 @@ class MainActivity : AppCompatActivity() {
         viewPager = findViewById(R.id.viewPager)
     }
 
-    private fun setupListeners() {
+    private fun setupViewPager() {
+        // Initialize with one tab
+        tabUrls.add("https://www.google.com")
+
+        pagerAdapter = TabPagerAdapter(this)
+        viewPager.adapter = pagerAdapter
+        viewPager.offscreenPageLimit = MAX_TABS
+
+        updateTabBadge()
+    }
+
+    private fun setupClickListeners() {
+        // URL bar - navigate on Enter
         urlEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
                 val input = urlEditText.text.toString().trim()
                 if (input.isNotEmpty()) {
-                    getCurrentFragment()?.loadUrl(formatUrl(input))
-                    simulateLoading()
+                    navigateTo(input)
                 }
                 true
             } else {
@@ -101,254 +100,372 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        tabButton.setOnClickListener { showTabsBottomSheet() }
-        menuButton.setOnClickListener { showMenuBottomSheet() }
+        // Tab button - show tab manager
+        tabButton.setOnClickListener {
+            showTabManager()
+        }
 
+        // Menu button - show options
+        menuButton.setOnClickListener {
+            showOptionsMenu()
+        }
+
+        // Update URL when swiping tabs
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                updateUrlForCurrentTab()
+                updateUrlFromCurrentTab()
             }
         })
     }
 
-    private fun getCurrentFragment(): WebViewFragment? {
-        val tag = "f${viewPager.currentItem}"
-        return supportFragmentManager.findFragmentByTag(tag) as? WebViewFragment
+    // ================== NAVIGATION ==================
+
+    private fun navigateTo(input: String) {
+        val url = formatUrl(input)
+        getCurrentWebViewFragment()?.loadUrl(url)
+        animateLoading()
     }
 
     private fun formatUrl(input: String): String {
-        return if (!input.startsWith("http://") && !input.startsWith("https://")) {
-            "https://$input"
-        } else input
+        return when {
+            input.startsWith("http://") || input.startsWith("https://") -> input
+            input.contains(".") && !input.contains(" ") -> "https://$input"
+            else -> "https://www.google.com/search?q=${Uri.encode(input)}"
+        }
     }
 
-    private fun addNewTab(url: String = "https://www.google.com", select: Boolean = true) {
+    private fun getCurrentWebViewFragment(): WebViewFragment? {
+        return supportFragmentManager.findFragmentByTag("f${viewPager.currentItem}") as? WebViewFragment
+    }
+
+    private fun updateUrlFromCurrentTab() {
+        getCurrentWebViewFragment()?.let { fragment ->
+            fragment.getUrl()?.let { urlEditText.setText(it) }
+        }
+    }
+
+    private fun animateLoading() {
+        loadingProgress.visibility = View.VISIBLE
+        val anim = ValueAnimator.ofInt(0, viewPager.width)
+        anim.duration = 800
+        anim.interpolator = DecelerateInterpolator()
+        anim.addUpdateListener { animation ->
+            val params = loadingProgress.layoutParams
+            params.width = animation.animatedValue as Int
+            loadingProgress.layoutParams = params
+        }
+        anim.start()
+        loadingProgress.postDelayed({
+            loadingProgress.visibility = View.GONE
+            val params = loadingProgress.layoutParams
+            params.width = 0
+            loadingProgress.layoutParams = params
+        }, 1000)
+    }
+
+    // ================== TAB MANAGEMENT ==================
+
+    private fun addTab(url: String = "https://www.google.com") {
         if (tabUrls.size >= MAX_TABS) {
-            Toast.makeText(this, "Maximum $MAX_TABS tabs", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Maximum $MAX_TABS tabs allowed", Toast.LENGTH_SHORT).show()
             return
         }
         tabUrls.add(url)
-        adapter.notifyItemInserted(tabUrls.size - 1)
+        pagerAdapter.notifyItemInserted(tabUrls.size - 1)
+        viewPager.setCurrentItem(tabUrls.size - 1, true)
         updateTabBadge()
-        if (select) {
-            viewPager.setCurrentItem(tabUrls.size - 1, true)
-        }
     }
 
     private fun closeTab(position: Int) {
         if (tabUrls.size <= 1) {
-            Toast.makeText(this, "Cannot close last tab", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Cannot close the last tab", Toast.LENGTH_SHORT).show()
             return
         }
+
+        val wasSelected = viewPager.currentItem == position
         tabUrls.removeAt(position)
-        adapter.notifyItemRemoved(position)
-        adapter.notifyItemRangeChanged(position, tabUrls.size)
+        pagerAdapter.notifyItemRemoved(position)
+        
+        if (position < tabUrls.size) {
+            pagerAdapter.notifyItemRangeChanged(position, tabUrls.size - position)
+        }
+
         updateTabBadge()
+
+        if (wasSelected && position >= tabUrls.size) {
+            viewPager.setCurrentItem(tabUrls.size - 1, false)
+        }
     }
 
     private fun updateTabBadge() {
         tabBadge.text = tabUrls.size.toString()
     }
 
-    private fun updateUrlForCurrentTab() {
-        getCurrentFragment()?.getUrl()?.let { urlEditText.setText(it) }
-    }
+    // ================== FRAGMENT CALLBACK ==================
 
     fun onFragmentReady(position: Int, fragment: WebViewFragment) {
-        applyDesktopMode(fragment, prefs.getBoolean("desktop_mode", false))
-        applyThirdPartyBlocking(fragment, prefs.getBoolean("block_third_party", true))
+        // Apply current settings
+        applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
+        applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
 
-        fragment.onUrlChange = { newUrl ->
+        // URL change callback
+        fragment.onUrlChange = { url ->
             if (viewPager.currentItem == position) {
-                urlEditText.setText(newUrl)
+                urlEditText.setText(url)
+            }
+            // Update stored URL
+            if (position < tabUrls.size) {
+                tabUrls[position] = url
             }
         }
     }
 
+    // ================== SETTINGS ==================
+
     private fun applyDesktopMode(fragment: WebViewFragment, enable: Boolean) {
         val ua = if (enable) {
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         } else {
             defaultUserAgent
         }
-        fragment.webView.settings.userAgentString = ua
+        try {
+            fragment.webView.settings.userAgentString = ua
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    private fun applyThirdPartyBlocking(fragment: WebViewFragment, block: Boolean) {
+    private fun applyThirdPartyCookieBlocking(fragment: WebViewFragment, block: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            cookieManager.setAcceptThirdPartyCookies(fragment.webView, !block)
+            try {
+                cookieManager.setAcceptThirdPartyCookies(fragment.webView, !block)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     private fun applyDesktopModeToAll(enable: Boolean) {
         for (i in tabUrls.indices) {
-            val tag = "f$i"
-            (supportFragmentManager.findFragmentByTag(tag) as? WebViewFragment)?.let {
+            val fragment = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
+            fragment?.let {
                 applyDesktopMode(it, enable)
-                it.webView.reload()
+                it.reload()
             }
         }
     }
 
-    private fun applyThirdPartyBlockingToAll(block: Boolean) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return
-        for (i in tabUrls.indices) {
-            val tag = "f$i"
-            (supportFragmentManager.findFragmentByTag(tag) as? WebViewFragment)?.let {
-                applyThirdPartyBlocking(it, block)
-            }
-        }
-    }
+    // ================== BOTTOM SHEETS ==================
 
-    private fun simulateLoading() {
-        loadingProgress.visibility = View.VISIBLE
-        val animator = ValueAnimator.ofInt(0, 100)
-        animator.duration = 800
-        animator.interpolator = DecelerateInterpolator()
-        animator.addUpdateListener { animation ->
-            val lp = loadingProgress.layoutParams
-            lp.width = (animation.animatedValue as Int * viewPager.width / 100)
-            loadingProgress.layoutParams = lp
-        }
-        animator.start()
-    }
-
-    private fun showTabsBottomSheet() {
+    private fun showTabManager() {
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_tabs, null)
         dialog.setContentView(view)
 
         val recyclerView = view.findViewById<RecyclerView>(R.id.tabsRecyclerView)
+        val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
+        val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
+
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        recyclerView.adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                val v = LayoutInflater.from(parent.context).inflate(R.layout.item_tab, parent, false)
-                return object : RecyclerView.ViewHolder(v) {}
+        recyclerView.adapter = TabPreviewAdapter(tabUrls, 
+            onTabClick = { position ->
+                viewPager.setCurrentItem(position, true)
+                updateUrlFromCurrentTab()
+                dialog.dismiss()
+            },
+            onCloseClick = { position ->
+                closeTab(position)
+                recyclerView.adapter?.notifyDataSetChanged()
             }
+        )
 
-            override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                holder.itemView.setOnClickListener {
-                    viewPager.setCurrentItem(position, true)
-                    dialog.dismiss()
-                    updateUrlForCurrentTab()
-                }
-                holder.itemView.findViewById<View>(R.id.closeBtn).setOnClickListener {
-                    closeTab(position)
-                    notifyDataSetChanged()
-                }
-            }
-
-            override fun getItemCount() = tabUrls.size
-        }
-
-        view.findViewById<TextView>(R.id.addTabBtn).setOnClickListener {
-            addNewTab()
+        addTabBtn.setOnClickListener {
+            addTab()
             dialog.dismiss()
         }
 
-        view.findViewById<TextView>(R.id.doneBtnTabs).setOnClickListener { dialog.dismiss() }
+        doneBtn.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
     }
 
-    private fun showMenuBottomSheet() {
+    @SuppressLint("UseSwitchCompatOrMaterialCode")
+    private fun showOptionsMenu() {
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_menu, null)
         dialog.setContentView(view)
 
+        // Zoom buttons
         view.findViewById<ImageButton>(R.id.zoomInBtn).setOnClickListener {
-            getCurrentFragment()?.zoomIn()
-        }
-        view.findViewById<ImageButton>(R.id.zoomOutBtn).setOnClickListener {
-            getCurrentFragment()?.zoomOut()
+            getCurrentWebViewFragment()?.zoomIn()
         }
 
+        view.findViewById<ImageButton>(R.id.zoomOutBtn).setOnClickListener {
+            getCurrentWebViewFragment()?.zoomOut()
+        }
+
+        // Refresh
         view.findViewById<LinearLayout>(R.id.refreshBtn).setOnClickListener {
-            getCurrentFragment()?.reload()
-            simulateLoading()
+            getCurrentWebViewFragment()?.reload()
+            animateLoading()
             dialog.dismiss()
         }
 
+        // Desktop mode toggle
         val desktopToggle = view.findViewById<SwitchCompat>(R.id.desktopToggle)
-        desktopToggle.isChecked = prefs.getBoolean("desktop_mode", false)
+        desktopToggle.isChecked = prefs.getBoolean(KEY_DESKTOP_MODE, false)
+        
         view.findViewById<LinearLayout>(R.id.desktopModeRow).setOnClickListener {
             desktopToggle.toggle()
-            prefs.edit().putBoolean("desktop_mode", desktopToggle.isChecked).apply()
-            applyDesktopModeToAll(desktopToggle.isChecked)
+            val enabled = desktopToggle.isChecked
+            prefs.edit().putBoolean(KEY_DESKTOP_MODE, enabled).apply()
+            applyDesktopModeToAll(enabled)
+            Toast.makeText(this, 
+                if (enabled) "Desktop mode enabled" else "Desktop mode disabled", 
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
+        // Tracking protection toggle
         val trackingToggle = view.findViewById<SwitchCompat>(R.id.trackingToggle)
-        trackingToggle.isChecked = prefs.getBoolean("block_third_party", true)
+        trackingToggle.isChecked = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true)
+
         view.findViewById<LinearLayout>(R.id.trackingProtectionRow).setOnClickListener {
             trackingToggle.toggle()
-            prefs.edit().putBoolean("block_third_party", trackingToggle.isChecked).apply()
-            applyThirdPartyBlockingToAll(trackingToggle.isChecked)
+            val enabled = trackingToggle.isChecked
+            prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, enabled).apply()
+            Toast.makeText(this, 
+                if (enabled) "Tracking blocked" else "Tracking allowed", 
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
+        // Cookie management
         view.findViewById<LinearLayout>(R.id.cookieManageBtn).setOnClickListener {
             dialog.dismiss()
-            showCookiesBottomSheet()
+            showCookieManager()
         }
 
-        view.findViewById<TextView>(R.id.closeMenuBtn).setOnClickListener { dialog.dismiss() }
+        // Close button
+        view.findViewById<TextView>(R.id.closeMenuBtn).setOnClickListener {
+            dialog.dismiss()
+        }
 
         dialog.show()
     }
 
-    private fun showCookiesBottomSheet() {
+    private fun showCookieManager() {
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_cookies, null)
         dialog.setContentView(view)
 
         val blockToggle = view.findViewById<SwitchCompat>(R.id.blockThirdPartyToggle)
-        blockToggle.isChecked = prefs.getBoolean("block_third_party", true)
+        blockToggle.isChecked = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true)
+
         view.findViewById<LinearLayout>(R.id.blockThirdPartyRow).setOnClickListener {
             blockToggle.toggle()
-            prefs.edit().putBoolean("block_third_party", blockToggle.isChecked).apply()
-            applyThirdPartyBlockingToAll(!blockToggle.isChecked)
+            prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, blockToggle.isChecked).apply()
         }
 
         view.findViewById<LinearLayout>(R.id.clearCookiesBtn).setOnClickListener {
-            val fragment = getCurrentFragment()
-            val url = fragment?.webView?.url
-            if (url != null) {
-                val domain = Uri.parse(url).host
-                domain?.let { clearCookies(it) }
-                Toast.makeText(this, "Cookies cleared for $domain", Toast.LENGTH_SHORT).show()
-            }
+            clearCurrentSiteCookies()
         }
 
         view.findViewById<ImageButton>(R.id.backBtn).setOnClickListener {
             dialog.dismiss()
-            showMenuBottomSheet()
+            showOptionsMenu()
         }
 
         dialog.show()
     }
 
-    private fun clearCookies(domain: String) {
+    private fun clearCurrentSiteCookies() {
+        val url = getCurrentWebViewFragment()?.getUrl()
+        if (url != null) {
+            val domain = Uri.parse(url).host
+            if (domain != null) {
+                clearCookiesForDomain(domain)
+                Toast.makeText(this, "Cookies cleared for $domain", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun clearCookiesForDomain(domain: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val cookies = cookieManager.getCookie("https://$domain")
-            if (!cookies.isNullOrEmpty()) {
-                cookies.split(";").forEach { cookie ->
-                    val name = cookie.trim().substringBefore("=")
-                    val expired = "$name=; Max-Age=0; Path=/; Domain=$domain"
-                    cookieManager.setCookie("https://$domain", expired)
-                    cookieManager.setCookie("https://$domain", "$expired; Domain=.$domain")
+            try {
+                val cookies = cookieManager.getCookie("https://$domain")
+                cookies?.split(";")?.forEach { cookie ->
+                    val name = cookie.trim().substringBefore("=", "")
+                    if (name.isNotEmpty()) {
+                        cookieManager.setCookie("https://$domain", "$name=; Max-Age=0; Path=/")
+                    }
                 }
                 cookieManager.flush()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
 
+    // ================== BACK BUTTON ==================
+
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
-        val fragment = getCurrentFragment()
+        val fragment = getCurrentWebViewFragment()
         if (fragment != null && fragment.canGoBack()) {
             fragment.goBack()
         } else {
             @Suppress("DEPRECATION")
             super.onBackPressed()
         }
+    }
+
+    // ================== ADAPTERS ==================
+
+    inner class TabPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
+        override fun getItemCount(): Int = tabUrls.size
+
+        override fun createFragment(position: Int): Fragment {
+            val fragment = WebViewFragment.newInstance(tabUrls[position])
+            // Post to ensure fragment is created first
+            viewPager.post {
+                onFragmentReady(position, fragment)
+            }
+            return fragment
+        }
+    }
+
+    inner class TabPreviewAdapter(
+        private val urls: List<String>,
+        private val onTabClick: (Int) -> Unit,
+        private val onCloseClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<TabPreviewAdapter.ViewHolder>() {
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            private val closeBtn: View = view.findViewById(R.id.closeBtn)
+
+            init {
+                itemView.setOnClickListener {
+                    onTabClick(adapterPosition)
+                }
+                closeBtn.setOnClickListener {
+                    onCloseClick(adapterPosition)
+                }
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_tab, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            // Tab preview binding
+        }
+
+        override fun getItemCount(): Int = urls.size
     }
 }

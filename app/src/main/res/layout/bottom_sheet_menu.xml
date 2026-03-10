@@ -3,32 +3,27 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_bottom_sheet"
-    android:paddingStart="20dp"
-    android:paddingEnd="20dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="40dp">
+    android:background="#F2F2F7"
+    android:padding="20dp">
 
-    <!-- Handle -->
     <View
         android:layout_width="32dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_handle" />
+        android:layout_marginBottom="16dp"
+        android:background="#E5E7EB" />
 
     <!-- Zoom & Refresh Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="@drawable/bg_card"
-        android:padding="4dp"
+        android:background="#FFFFFF"
+        android:padding="8dp"
         android:gravity="center_vertical"
         android:layout_marginTop="8dp">
 
-        <!-- Refresh Button -->
+        <!-- Refresh -->
         <LinearLayout
             android:id="@+id/refreshBtn"
             android:layout_width="0dp"
@@ -48,7 +43,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Refresh"
-                android:textColor="@color/text_primary"
+                android:textColor="#1F2937"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:layout_marginStart="8dp" />
@@ -58,7 +53,7 @@
         <View
             android:layout_width="1dp"
             android:layout_height="24dp"
-            android:background="@color/border" />
+            android:background="#E5E7EB" />
 
         <!-- Zoom Controls -->
         <LinearLayout
@@ -75,20 +70,17 @@
                 android:layout_height="28dp"
                 android:background="@drawable/bg_zoom_button"
                 android:src="@drawable/ic_minus"
-                android:scaleType="center"
-                android:padding="6dp" />
+                android:scaleType="center" />
 
             <TextView
                 android:id="@+id/zoomLevelText"
-                android:layout_width="40dp"
+                android:layout_width="50dp"
                 android:layout_height="wrap_content"
                 android:text="100%"
-                android:textColor="@color/text_primary"
+                android:textColor="#1F2937"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:gravity="center"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="8dp" />
+                android:gravity="center" />
 
             <ImageButton
                 android:id="@+id/zoomInBtn"
@@ -96,8 +88,7 @@
                 android:layout_height="28dp"
                 android:background="@drawable/bg_zoom_button"
                 android:src="@drawable/ic_plus"
-                android:scaleType="center"
-                android:padding="6dp" />
+                android:scaleType="center" />
 
         </LinearLayout>
 
@@ -108,7 +99,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/bg_card"
+        android:background="#FFFFFF"
         android:layout_marginTop="12dp">
 
         <!-- Cookie Management -->
@@ -145,7 +136,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Cookie Management"
-                    android:textColor="@color/text_primary"
+                    android:textColor="#1F2937"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
@@ -153,7 +144,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Block third-party, exceptions"
-                    android:textColor="@color/text_tertiary"
+                    android:textColor="#9CA3AF"
                     android:textSize="10sp" />
 
             </LinearLayout>
@@ -168,7 +159,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/border_light" />
+            android:background="#F3F4F6" />
 
         <!-- Tracking Protection -->
         <LinearLayout
@@ -198,7 +189,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Tracking Protection"
-                android:textColor="@color/text_primary"
+                android:textColor="#1F2937"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:layout_marginStart="12dp" />
@@ -215,15 +206,14 @@
 
     </LinearLayout>
 
-    <!-- Display Settings -->
+    <!-- Desktop Mode -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/bg_card"
+        android:background="#FFFFFF"
         android:layout_marginTop="12dp">
 
-        <!-- Desktop Site -->
         <LinearLayout
             android:id="@+id/desktopModeRow"
             android:layout_width="match_parent"
@@ -251,7 +241,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="Desktop Site"
-                android:textColor="@color/text_primary"
+                android:textColor="#1F2937"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:layout_marginStart="12dp" />
@@ -277,7 +267,7 @@
         android:background="@drawable/bg_button_white"
         android:gravity="center"
         android:text="CLOSE MENU"
-        android:textColor="@color/text_secondary"
+        android:textColor="#6B7280"
         android:textSize="11sp"
         android:textStyle="bold"
         android:letterSpacing="0.1" />

@@ -12,7 +12,7 @@ class TabAdapter(
     override fun getItemCount(): Int = urls.size
 
     override fun createFragment(position: Int): Fragment {
-        return WebViewFragment.newInstance(urls[position], position)
+        return WebViewFragment.newInstance(urls[position])
     }
 
     fun addTab(url: String = "https://www.google.com") {
