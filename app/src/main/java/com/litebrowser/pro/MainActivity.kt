@@ -41,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     private val tabTitles = mutableListOf<String>()
     private lateinit var pagerAdapter: TabPagerAdapter
 
+    // Fragment tracking for proper lifecycle management
+    private val fragmentMap = mutableMapOf<Int, WebViewFragment>()
+
     // Settings
     private lateinit var prefs: SharedPreferences
     private lateinit var cookieManager: CookieManager
@@ -116,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 updateUrlFromCurrentTab()
+                applySettingsToCurrentFragment()
             }
         })
     }
@@ -137,7 +141,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getCurrentWebViewFragment(): WebViewFragment? {
-        return supportFragmentManager.findFragmentByTag("f${viewPager.currentItem}") as? WebViewFragment
+        val position = viewPager.currentItem
+        
+        // First try to get from our tracked map
+        fragmentMap[position]?.let { return it }
+        
+        // Fallback: try to find by tag (ViewPager2 uses "f{position}" format)
+        val tag = "f$position"
+        val fragment = supportFragmentManager.findFragmentByTag(tag) as? WebViewFragment
+        
+        // If found, update our map
+        if (fragment != null) {
+            fragmentMap[position] = fragment
+        }
+        
+        return fragment
     }
 
     private fun updateUrlFromCurrentTab() {
@@ -188,6 +206,21 @@ class MainActivity : AppCompatActivity() {
         val wasSelected = viewPager.currentItem == position
         val wasLastTab = position == tabUrls.size - 1
 
+        // Remove from tracking map
+        fragmentMap.remove(position)
+        
+        // Shift fragments in map for positions after the removed one
+        val updatedMap = mutableMapOf<Int, WebViewFragment>()
+        fragmentMap.forEach { (pos, fragment) ->
+            if (pos > position) {
+                updatedMap[pos - 1] = fragment
+            } else {
+                updatedMap[pos] = fragment
+            }
+        }
+        fragmentMap.clear()
+        fragmentMap.putAll(updatedMap)
+
         tabUrls.removeAt(position)
         tabTitles.removeAt(position)
         pagerAdapter.notifyItemRemoved(position)
@@ -202,6 +235,7 @@ class MainActivity : AppCompatActivity() {
         if (wasSelected) {
             val newPosition = if (wasLastTab) tabUrls.size - 1 else position
             viewPager.setCurrentItem(newPosition, false)
+            updateUrlFromCurrentTab()
         }
     }
 
@@ -219,6 +253,9 @@ class MainActivity : AppCompatActivity() {
     // ================== FRAGMENT CALLBACK ==================
 
     fun onFragmentReady(position: Int, fragment: WebViewFragment) {
+        // Track the fragment
+        fragmentMap[position] = fragment
+        
         // Apply current settings
         applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
         applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
@@ -242,6 +279,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun applySettingsToCurrentFragment() {
+        val fragment = getCurrentWebViewFragment() ?: return
+        applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
+        applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
+    }
+
     // ================== SETTINGS ==================
 
     private fun applyDesktopMode(fragment: WebViewFragment, enable: Boolean) {
@@ -260,7 +303,9 @@ class MainActivity : AppCompatActivity() {
     private fun applyThirdPartyCookieBlocking(fragment: WebViewFragment, block: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
-                cookieManager.setAcceptThirdPartyCookies(fragment.getWebView(), !block)
+                fragment.getWebView()?.let { webView ->
+                    cookieManager.setAcceptThirdPartyCookies(webView, !block)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -274,12 +319,12 @@ class MainActivity : AppCompatActivity() {
             defaultUserAgent
         }
 
+        // Apply to tracked fragments
         for (i in tabUrls.indices) {
-            val fragment = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
-            fragment?.let {
-                it.setDesktopMode(enable, ua)
-                it.reload()
-            }
+            val fragment = fragmentMap[i] 
+                ?: (supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment)
+            
+            fragment?.setDesktopMode(enable, ua)
         }
     }
 
@@ -294,7 +339,19 @@ class MainActivity : AppCompatActivity() {
         val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
         val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
 
-        // Create adapter with current data
+        refreshTabAdapter(recyclerView, dialog)
+
+        addTabBtn.setOnClickListener {
+            addTab()
+            dialog.dismiss()
+        }
+
+        doneBtn.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    private fun refreshTabAdapter(recyclerView: RecyclerView, dialog: BottomSheetDialog) {
         val adapter = TabPreviewAdapter(
             tabUrls.toList(),
             tabTitles.toList(),
@@ -305,27 +362,8 @@ class MainActivity : AppCompatActivity() {
             },
             onCloseClick = { position ->
                 closeTab(position)
-                // Refresh the dialog with updated data
                 if (tabUrls.isNotEmpty()) {
-                    recyclerView.adapter = TabPreviewAdapter(
-                        tabUrls.toList(),
-                        tabTitles.toList(),
-                        viewPager.currentItem,
-                        onTabClick = { pos ->
-                            selectTab(pos)
-                            dialog.dismiss()
-                        },
-                        onCloseClick = { pos ->
-                            closeTab(pos)
-                            recyclerView.adapter = TabPreviewAdapter(
-                                tabUrls.toList(),
-                                tabTitles.toList(),
-                                viewPager.currentItem,
-                                onTabClick = { dialog.dismiss() },
-                                onCloseClick = {}
-                            )
-                        }
-                    )
+                    refreshTabAdapter(recyclerView, dialog)
                 } else {
                     dialog.dismiss()
                 }
@@ -334,15 +372,6 @@ class MainActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         recyclerView.adapter = adapter
-
-        addTabBtn.setOnClickListener {
-            addTab()
-            dialog.dismiss()
-        }
-
-        doneBtn.setOnClickListener { dialog.dismiss() }
-
-        dialog.show()
     }
 
     @SuppressLint("UseSwitchCompatOrMaterialCode")
@@ -359,9 +388,9 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<ImageButton>(R.id.zoomInBtn).setOnClickListener {
             val fragment = getCurrentWebViewFragment()
             if (fragment != null) {
-                fragment.zoomIn()
+                val success = fragment.zoomIn()
                 updateZoomLevelText(zoomLevelText)
-                Toast.makeText(this, "Zoomed in", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (success) "Zoomed in" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
             }
@@ -370,9 +399,9 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<ImageButton>(R.id.zoomOutBtn).setOnClickListener {
             val fragment = getCurrentWebViewFragment()
             if (fragment != null) {
-                fragment.zoomOut()
+                val success = fragment.zoomOut()
                 updateZoomLevelText(zoomLevelText)
-                Toast.makeText(this, "Zoomed out", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, if (success) "Zoomed out" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
             }
@@ -513,8 +542,8 @@ class MainActivity : AppCompatActivity() {
 
         override fun createFragment(position: Int): Fragment {
             val fragment = WebViewFragment.newInstance(tabUrls[position])
-            // Post to ensure fragment is created first
-            viewPager.post {
+            // Fragment is ready, notify activity
+            fragment.postDelayed {
                 onFragmentReady(position, fragment)
             }
             return fragment
@@ -581,4 +610,9 @@ class MainActivity : AppCompatActivity() {
 
         override fun getItemCount(): Int = urls.size
     }
+}
+
+// Extension function to post with delay on Fragment
+private fun Fragment.postDelayed(delayMillis: Long = 50, action: () -> Unit) {
+    view?.postDelayed(action, delayMillis)
 }
