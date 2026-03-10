@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
 
     // Data
     private val tabUrls = mutableListOf<String>()
+    private val tabTitles = mutableListOf<String>()
     private lateinit var pagerAdapter: TabPagerAdapter
 
     // Settings
@@ -78,6 +79,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupViewPager() {
         // Initialize with one tab
         tabUrls.add("https://www.google.com")
+        tabTitles.add("Google")
 
         pagerAdapter = TabPagerAdapter(this)
         viewPager.adapter = pagerAdapter
@@ -171,6 +173,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         tabUrls.add(url)
+        tabTitles.add("New Tab")
         pagerAdapter.notifyItemInserted(tabUrls.size - 1)
         viewPager.setCurrentItem(tabUrls.size - 1, true)
         updateTabBadge()
@@ -183,17 +186,29 @@ class MainActivity : AppCompatActivity() {
         }
 
         val wasSelected = viewPager.currentItem == position
+        val wasLastTab = position == tabUrls.size - 1
+
         tabUrls.removeAt(position)
+        tabTitles.removeAt(position)
         pagerAdapter.notifyItemRemoved(position)
-        
+
         if (position < tabUrls.size) {
             pagerAdapter.notifyItemRangeChanged(position, tabUrls.size - position)
         }
 
         updateTabBadge()
 
-        if (wasSelected && position >= tabUrls.size) {
-            viewPager.setCurrentItem(tabUrls.size - 1, false)
+        // Adjust current tab position
+        if (wasSelected) {
+            val newPosition = if (wasLastTab) tabUrls.size - 1 else position
+            viewPager.setCurrentItem(newPosition, false)
+        }
+    }
+
+    private fun selectTab(position: Int) {
+        if (position in 0 until tabUrls.size) {
+            viewPager.setCurrentItem(position, true)
+            updateUrlFromCurrentTab()
         }
     }
 
@@ -218,18 +233,25 @@ class MainActivity : AppCompatActivity() {
                 tabUrls[position] = url
             }
         }
+
+        // Title change callback
+        fragment.onTitleChange = { title ->
+            if (position < tabTitles.size) {
+                tabTitles[position] = title
+            }
+        }
     }
 
     // ================== SETTINGS ==================
 
     private fun applyDesktopMode(fragment: WebViewFragment, enable: Boolean) {
-        val ua = if (enable) {
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        } else {
-            defaultUserAgent
-        }
         try {
-            fragment.webView.settings.userAgentString = ua
+            val ua = if (enable) {
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            } else {
+                defaultUserAgent
+            }
+            fragment.setDesktopMode(enable, ua)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -238,7 +260,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyThirdPartyCookieBlocking(fragment: WebViewFragment, block: Boolean) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             try {
-                cookieManager.setAcceptThirdPartyCookies(fragment.webView, !block)
+                cookieManager.setAcceptThirdPartyCookies(fragment.getWebView(), !block)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -246,10 +268,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyDesktopModeToAll(enable: Boolean) {
+        val ua = if (enable) {
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        } else {
+            defaultUserAgent
+        }
+
         for (i in tabUrls.indices) {
             val fragment = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
             fragment?.let {
-                applyDesktopMode(it, enable)
+                it.setDesktopMode(enable, ua)
                 it.reload()
             }
         }
@@ -266,18 +294,46 @@ class MainActivity : AppCompatActivity() {
         val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
         val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
 
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        recyclerView.adapter = TabPreviewAdapter(tabUrls, 
+        // Create adapter with current data
+        val adapter = TabPreviewAdapter(
+            tabUrls.toList(),
+            tabTitles.toList(),
+            viewPager.currentItem,
             onTabClick = { position ->
-                viewPager.setCurrentItem(position, true)
-                updateUrlFromCurrentTab()
+                selectTab(position)
                 dialog.dismiss()
             },
             onCloseClick = { position ->
                 closeTab(position)
-                recyclerView.adapter?.notifyDataSetChanged()
+                // Refresh the dialog with updated data
+                if (tabUrls.isNotEmpty()) {
+                    recyclerView.adapter = TabPreviewAdapter(
+                        tabUrls.toList(),
+                        tabTitles.toList(),
+                        viewPager.currentItem,
+                        onTabClick = { pos ->
+                            selectTab(pos)
+                            dialog.dismiss()
+                        },
+                        onCloseClick = { pos ->
+                            closeTab(pos)
+                            recyclerView.adapter = TabPreviewAdapter(
+                                tabUrls.toList(),
+                                tabTitles.toList(),
+                                viewPager.currentItem,
+                                onTabClick = { dialog.dismiss() },
+                                onCloseClick = {}
+                            )
+                        }
+                    )
+                } else {
+                    dialog.dismiss()
+                }
             }
         )
+
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        recyclerView.adapter = adapter
 
         addTabBtn.setOnClickListener {
             addTab()
@@ -295,13 +351,31 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_menu, null)
         dialog.setContentView(view)
 
+        // Zoom level text
+        val zoomLevelText = view.findViewById<TextView>(R.id.zoomLevelText)
+        updateZoomLevelText(zoomLevelText)
+
         // Zoom buttons
         view.findViewById<ImageButton>(R.id.zoomInBtn).setOnClickListener {
-            getCurrentWebViewFragment()?.zoomIn()
+            val fragment = getCurrentWebViewFragment()
+            if (fragment != null) {
+                fragment.zoomIn()
+                updateZoomLevelText(zoomLevelText)
+                Toast.makeText(this, "Zoomed in", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
+            }
         }
 
         view.findViewById<ImageButton>(R.id.zoomOutBtn).setOnClickListener {
-            getCurrentWebViewFragment()?.zoomOut()
+            val fragment = getCurrentWebViewFragment()
+            if (fragment != null) {
+                fragment.zoomOut()
+                updateZoomLevelText(zoomLevelText)
+                Toast.makeText(this, "Zoomed out", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
+            }
         }
 
         // Refresh
@@ -314,14 +388,14 @@ class MainActivity : AppCompatActivity() {
         // Desktop mode toggle
         val desktopToggle = view.findViewById<SwitchCompat>(R.id.desktopToggle)
         desktopToggle.isChecked = prefs.getBoolean(KEY_DESKTOP_MODE, false)
-        
+
         view.findViewById<LinearLayout>(R.id.desktopModeRow).setOnClickListener {
             desktopToggle.toggle()
             val enabled = desktopToggle.isChecked
             prefs.edit().putBoolean(KEY_DESKTOP_MODE, enabled).apply()
             applyDesktopModeToAll(enabled)
-            Toast.makeText(this, 
-                if (enabled) "Desktop mode enabled" else "Desktop mode disabled", 
+            Toast.makeText(this,
+                if (enabled) "Desktop mode enabled - Reloading pages" else "Desktop mode disabled - Reloading pages",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -334,8 +408,8 @@ class MainActivity : AppCompatActivity() {
             trackingToggle.toggle()
             val enabled = trackingToggle.isChecked
             prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, enabled).apply()
-            Toast.makeText(this, 
-                if (enabled) "Tracking blocked" else "Tracking allowed", 
+            Toast.makeText(this,
+                if (enabled) "Tracking blocked" else "Tracking allowed",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -352,6 +426,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun updateZoomLevelText(textView: TextView) {
+        val fragment = getCurrentWebViewFragment()
+        if (fragment != null) {
+            val scale = fragment.getZoomLevel()
+            textView.text = "${(scale * 100).toInt()}%"
+        } else {
+            textView.text = "100%"
+        }
     }
 
     private fun showCookieManager() {
@@ -439,20 +523,47 @@ class MainActivity : AppCompatActivity() {
 
     inner class TabPreviewAdapter(
         private val urls: List<String>,
+        private val titles: List<String>,
+        private val currentPosition: Int,
         private val onTabClick: (Int) -> Unit,
         private val onCloseClick: (Int) -> Unit
     ) : RecyclerView.Adapter<TabPreviewAdapter.ViewHolder>() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            private val closeBtn: View = view.findViewById(R.id.closeBtn)
+            private val closeBtn: ImageButton = view.findViewById(R.id.closeBtn)
+            private val titleText: TextView? = view.findViewById(R.id.tabTitleText)
+            private val container: View = view.findViewById(R.id.tabContainer)
 
             init {
                 itemView.setOnClickListener {
-                    onTabClick(adapterPosition)
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onTabClick(adapterPosition)
+                    }
                 }
                 closeBtn.setOnClickListener {
-                    onCloseClick(adapterPosition)
+                    if (adapterPosition != RecyclerView.NO_POSITION) {
+                        onCloseClick(adapterPosition)
+                    }
                 }
+            }
+
+            fun bind(url: String, title: String, isSelected: Boolean) {
+                // Display title or URL shortened
+                val displayTitle = if (title.isNotEmpty() && title != "about:blank") {
+                    title
+                } else {
+                    try {
+                        Uri.parse(url).host ?: "Page"
+                    } catch (e: Exception) {
+                        "Page"
+                    }
+                }
+                titleText?.text = displayTitle.take(15)
+
+                // Highlight selected tab
+                container?.setBackgroundColor(
+                    if (isSelected) Color.parseColor("#E3F2FD") else Color.parseColor("#FFFFFF")
+                )
             }
         }
 
@@ -463,7 +574,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            // Tab preview binding
+            if (position < urls.size && position < titles.size) {
+                holder.bind(urls[position], titles[position], position == currentPosition)
+            }
         }
 
         override fun getItemCount(): Int = urls.size
