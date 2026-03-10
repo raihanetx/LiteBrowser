@@ -1,68 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/tabContainer"
-    android:layout_width="100dp"
-    android:layout_height="100dp"
-    android:background="@drawable/bg_card"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="110dp"
+    android:layout_height="130dp"
     android:layout_marginEnd="8dp"
-    android:clickable="true"
-    android:focusable="true">
+    android:background="@drawable/bg_card"
+    android:elevation="2dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
+    <!-- Tab Preview Area -->
+    <View
+        android:id="@+id/tabPreview"
+        android:layout_width="0dp"
+        android:layout_height="70dp"
+        android:layout_margin="8dp"
+        android:background="#F0F0F0"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Tab Title -->
+    <TextView
+        android:id="@+id/tabTitleText"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:ellipsize="end"
         android:gravity="center"
-        android:clickable="false"
-        android:focusable="false">
+        android:maxLines="2"
+        android:text="Google"
+        android:textColor="#333333"
+        android:textSize="11sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabPreview" />
 
-        <!-- Tab preview placeholder -->
-        <View
-            android:layout_width="60dp"
-            android:layout_height="50dp"
-            android:background="#F3F4F6"
-            android:clickable="false" />
-
-        <!-- Tab title -->
-        <TextView
-            android:id="@+id/tabTitleText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginStart="4dp"
-            android:layout_marginEnd="4dp"
-            android:text="Page"
-            android:textColor="#374151"
-            android:textSize="10sp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:gravity="center"
-            android:clickable="false" />
-
-    </LinearLayout>
-
-    <!-- Close button -->
-    <ImageButton
+    <!-- Close Button -->
+    <ImageView
         android:id="@+id/closeBtn"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:layout_gravity="top|end"
-        android:layout_margin="4dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"
         android:background="@drawable/bg_close_circle"
-        android:src="@drawable/ic_close"
-        android:scaleType="center"
         android:padding="4dp"
-        android:clickable="true"
-        android:focusable="true"
-        android:contentDescription="Close tab" />
+        android:src="@drawable/ic_close"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Selected indicator -->
+    <!-- Selected Indicator -->
     <View
         android:id="@+id/selectedIndicator"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="3dp"
-        android:layout_gravity="bottom"
         android:background="#007AFF"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-</FrameLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

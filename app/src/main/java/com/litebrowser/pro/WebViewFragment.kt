@@ -2,7 +2,6 @@ package com.litebrowser.pro
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,7 +12,7 @@ import androidx.fragment.app.Fragment
 
 class WebViewFragment : Fragment() {
 
-    private var webViewInstance: WebView? = null
+    private var webView: WebView? = null
 
     var onUrlChange: ((String) -> Unit)? = null
     var onTitleChange: ((String) -> Unit)? = null
@@ -21,7 +20,6 @@ class WebViewFragment : Fragment() {
     private var initialUrl: String? = null
     private var defaultUserAgent: String = ""
     private var isDesktopMode: Boolean = false
-    private var currentZoomLevel: Float = 1.0f
 
     companion object {
         private const val ARG_URL = "url"
@@ -36,16 +34,13 @@ class WebViewFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         initialUrl = arguments?.getString(ARG_URL)
-        defaultUserAgent = WebSettings.getDefaultUserAgent(requireContext())
     }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        if (webViewInstance != null) {
-            return webViewInstance!!
-        }
+        if (webView != null) return webView!!
 
-        webViewInstance = WebView(requireContext()).apply {
+        webView = WebView(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -77,31 +72,21 @@ class WebViewFragment : Fragment() {
 
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
-                    view?.title?.let { title ->
-                        if (title.isNotEmpty()) {
-                            onTitleChange?.invoke(title)
-                        }
-                    }
+                    view?.title?.let { if (it.isNotEmpty()) onTitleChange?.invoke(it) }
                 }
 
-                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                    return false
-                }
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
             }
 
             webChromeClient = object : WebChromeClient() {
                 override fun onReceivedTitle(view: WebView?, title: String?) {
                     super.onReceivedTitle(view, title)
-                    title?.let {
-                        if (it.isNotEmpty()) {
-                            onTitleChange?.invoke(it)
-                        }
-                    }
+                    title?.let { if (it.isNotEmpty()) onTitleChange?.invoke(it) }
                 }
             }
         }
 
-        return webViewInstance!!
+        return webView!!
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -111,29 +96,24 @@ class WebViewFragment : Fragment() {
         (activity as? MainActivity)?.onFragmentCreated(this)
         
         // Load URL
-        if (initialUrl != null && webViewInstance?.url == null) {
-            webViewInstance?.loadUrl(initialUrl!!)
+        if (initialUrl != null && webView?.url == null) {
+            webView?.loadUrl(initialUrl!!)
         }
     }
 
     override fun onResume() {
         super.onResume()
-        webViewInstance?.onResume()
+        webView?.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        webViewInstance?.onPause()
+        webView?.onPause()
     }
 
     override fun onDestroy() {
-        cleanupWebView()
-        super.onDestroy()
-    }
-
-    private fun cleanupWebView() {
         try {
-            webViewInstance?.apply {
+            webView?.apply {
                 stopLoading()
                 settings.javaScriptEnabled = false
                 clearHistory()
@@ -143,91 +123,46 @@ class WebViewFragment : Fragment() {
                 removeAllViews()
                 destroy()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        webViewInstance = null
+        } catch (e: Exception) { e.printStackTrace() }
+        webView = null
         onUrlChange = null
         onTitleChange = null
+        super.onDestroy()
     }
 
     // Public API
-    fun getWebView(): WebView? = webViewInstance
+    fun getWebView(): WebView? = webView
 
-    fun loadUrl(url: String) {
-        webViewInstance?.loadUrl(url)
-    }
+    fun loadUrl(url: String) { webView?.loadUrl(url) }
 
-    fun getUrl(): String? = webViewInstance?.url
+    fun getUrl(): String? = webView?.url
 
-    fun canGoBack(): Boolean = webViewInstance?.canGoBack() ?: false
+    fun canGoBack(): Boolean = webView?.canGoBack() ?: false
 
-    fun goBack() {
-        webViewInstance?.let { if (it.canGoBack()) it.goBack() }
-    }
+    fun goBack() { webView?.let { if (it.canGoBack()) it.goBack() } }
 
-    fun canGoForward(): Boolean = webViewInstance?.canGoForward() ?: false
+    fun reload() { webView?.reload() }
 
-    fun goForward() {
-        webViewInstance?.let { if (it.canGoForward()) it.goForward() }
-    }
-
-    fun reload() {
-        webViewInstance?.reload()
-    }
-
-    fun zoomIn(): Boolean {
-        return webViewInstance?.let { wv ->
-            try {
-                val currentZoom = wv.settings.textZoom
-                if (currentZoom < 200) {
-                    wv.settings.textZoom = minOf(currentZoom + 10, 200)
-                    currentZoomLevel = wv.settings.textZoom / 100f
-                    return true
-                }
-                false
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        } ?: false
-    }
-
-    fun zoomOut(): Boolean {
-        return webViewInstance?.let { wv ->
-            try {
-                val currentZoom = wv.settings.textZoom
-                if (currentZoom > 50) {
-                    wv.settings.textZoom = maxOf(currentZoom - 10, 50)
-                    currentZoomLevel = wv.settings.textZoom / 100f
-                    return true
-                }
-                false
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
-        } ?: false
-    }
-
-    fun getZoomLevel(): Float {
-        return webViewInstance?.settings?.textZoom?.div(100f) ?: currentZoomLevel
-    }
-
-    fun setDesktopMode(enable: Boolean, userAgent: String) {
-        webViewInstance?.let { wv ->
-            try {
-                isDesktopMode = enable
-                wv.settings.userAgentString = userAgent
-                wv.settings.useWideViewPort = enable
-                wv.settings.loadWithOverviewMode = !enable
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+    fun zoomIn() {
+        webView?.let { wv ->
+            val current = wv.settings.textZoom
+            if (current < 200) wv.settings.textZoom = minOf(current + 10, 200)
         }
     }
 
-    fun isDesktopModeEnabled(): Boolean = isDesktopMode
+    fun zoomOut() {
+        webView?.let { wv ->
+            val current = wv.settings.textZoom
+            if (current > 50) wv.settings.textZoom = maxOf(current - 10, 50)
+        }
+    }
 
-    fun getTitle(): String? = webViewInstance?.title
+    fun getZoomLevel(): Float = (webView?.settings?.textZoom ?: 100) / 100f
+
+    fun setDesktopMode(enable: Boolean, userAgent: String) {
+        webView?.settings?.userAgentString = userAgent
+        webView?.settings?.useWideViewPort = enable
+        webView?.settings?.loadWithOverviewMode = !enable
+        isDesktopMode = enable
+    }
 }

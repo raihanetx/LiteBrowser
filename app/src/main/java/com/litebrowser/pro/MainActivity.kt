@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -30,7 +29,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class MainActivity : AppCompatActivity() {
 
-    private val TAG = "MainActivity"
+    private val TAG = "LiteBrowser"
 
     // UI
     private lateinit var urlEditText: EditText
@@ -104,14 +103,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        tabButton.setOnClickListener {
-            Log.d(TAG, "Tab button clicked")
-            showTabManager()
-        }
-
-        menuButton.setOnClickListener {
-            showOptionsMenu()
-        }
+        tabButton.setOnClickListener { showTabManager() }
+        menuButton.setOnClickListener { showOptionsMenu() }
 
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
@@ -177,7 +170,6 @@ class MainActivity : AppCompatActivity() {
         pagerAdapter.notifyItemInserted(tabUrls.size - 1)
         viewPager.setCurrentItem(tabUrls.size - 1, true)
         updateTabBadge()
-        Log.d(TAG, "Added tab. Total: ${tabUrls.size}")
     }
 
     private fun closeTab(position: Int) {
@@ -204,25 +196,11 @@ class MainActivity : AppCompatActivity() {
             viewPager.setCurrentItem(newPosition, false)
             updateUrlFromCurrentTab()
         }
-        Log.d(TAG, "Closed tab $position. Total: ${tabUrls.size}")
-    }
-
-    private fun switchToTab(position: Int) {
-        Log.d(TAG, "Switching to tab $position")
-        if (position in 0 until tabUrls.size) {
-            viewPager.setCurrentItem(position, true)
-            // Post to ensure the switch completes
-            viewPager.postDelayed({
-                updateUrlFromCurrentTab()
-            }, 100)
-        }
     }
 
     private fun updateTabBadge() {
         tabBadge.text = tabUrls.size.toString()
     }
-
-    // ================== FRAGMENT CALLBACK ==================
 
     fun onFragmentCreated(fragment: WebViewFragment) {
         for (i in 0 until tabUrls.size) {
@@ -295,49 +273,42 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("InflateParams")
     private fun showTabManager() {
+        Log.d(TAG, "showTabManager: ${tabUrls.size} tabs")
+        
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_tabs, null)
         dialog.setContentView(view)
 
-        val recyclerView = view.findViewById<RecyclerView>(R.id.tabsRecyclerView)
-        val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
-        val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
+        val recyclerView: RecyclerView = view.findViewById(R.id.tabsRecyclerView)
+        val addTabBtn: TextView = view.findViewById(R.id.addTabBtn)
+        val doneBtn: TextView = view.findViewById(R.id.doneBtnTabs)
 
-        Log.d(TAG, "Showing tab manager with ${tabUrls.size} tabs")
-
-        // Adapter with explicit click handling
-        val adapter = TabPreviewAdapter(
-            tabUrls.toList(),
-            tabTitles.toList(),
-            viewPager.currentItem,
-            onTabClick = { position ->
-                Log.d(TAG, "Tab clicked: $position")
-                Toast.makeText(this, "Switching to tab ${position + 1}", Toast.LENGTH_SHORT).show()
-                switchToTab(position)
+        // Simple adapter with item view click
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        recyclerView.adapter = TabAdapter(
+            tabs = tabUrls.mapIndexed { index, url -> 
+                TabItem(url, tabTitles.getOrNull(index) ?: "Tab ${index + 1}") 
+            },
+            selectedPosition = viewPager.currentItem,
+            onTabSelected = { position ->
+                Log.d(TAG, "Tab selected: $position")
+                viewPager.setCurrentItem(position, true)
                 dialog.dismiss()
             },
-            onCloseClick = { position ->
-                Log.d(TAG, "Close clicked: $position")
+            onTabClosed = { position ->
+                Log.d(TAG, "Tab closed: $position")
                 closeTab(position)
-                if (tabUrls.isNotEmpty()) {
-                    recyclerView.adapter?.notifyDataSetChanged()
-                } else {
-                    dialog.dismiss()
-                }
+                recyclerView.adapter?.notifyDataSetChanged()
+                if (tabUrls.isEmpty()) dialog.dismiss()
             }
         )
 
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        recyclerView.adapter = adapter
-
-        addTabBtn.setOnClickListener {
+        addTabBtn.setOnClickListener { 
             addTab()
-            dialog.dismiss()
-        }
-
-        doneBtn.setOnClickListener { 
             dialog.dismiss() 
         }
+        
+        doneBtn.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
     }
@@ -348,24 +319,20 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_menu, null)
         dialog.setContentView(view)
 
-        val zoomLevelText = view.findViewById<TextView>(R.id.zoomLevelText)
+        val zoomLevelText: TextView = view.findViewById(R.id.zoomLevelText)
         updateZoomLevelText(zoomLevelText)
 
         view.findViewById<ImageButton>(R.id.zoomInBtn).setOnClickListener {
-            val fragment = getCurrentWebViewFragment()
-            if (fragment != null) {
-                val success = fragment.zoomIn()
+            getCurrentWebViewFragment()?.let { fragment ->
+                fragment.zoomIn()
                 updateZoomLevelText(zoomLevelText)
-                Toast.makeText(this, if (success) "Zoomed in" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
             }
         }
 
         view.findViewById<ImageButton>(R.id.zoomOutBtn).setOnClickListener {
-            val fragment = getCurrentWebViewFragment()
-            if (fragment != null) {
-                val success = fragment.zoomOut()
+            getCurrentWebViewFragment()?.let { fragment ->
+                fragment.zoomOut()
                 updateZoomLevelText(zoomLevelText)
-                Toast.makeText(this, if (success) "Zoomed out" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -375,7 +342,7 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
 
-        val desktopToggle = view.findViewById<SwitchCompat>(R.id.desktopToggle)
+        val desktopToggle: SwitchCompat = view.findViewById(R.id.desktopToggle)
         desktopToggle.isChecked = prefs.getBoolean(KEY_DESKTOP_MODE, false)
 
         view.findViewById<LinearLayout>(R.id.desktopModeRow).setOnClickListener {
@@ -383,19 +350,15 @@ class MainActivity : AppCompatActivity() {
             val enabled = desktopToggle.isChecked
             prefs.edit().putBoolean(KEY_DESKTOP_MODE, enabled).apply()
             applyDesktopModeToAll(enabled)
-            Toast.makeText(this,
-                if (enabled) "Desktop mode enabled" else "Desktop mode disabled",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(this, if (enabled) "Desktop mode enabled" else "Desktop mode disabled", Toast.LENGTH_SHORT).show()
         }
 
-        val trackingToggle = view.findViewById<SwitchCompat>(R.id.trackingToggle)
+        val trackingToggle: SwitchCompat = view.findViewById(R.id.trackingToggle)
         trackingToggle.isChecked = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true)
 
         view.findViewById<LinearLayout>(R.id.trackingProtectionRow).setOnClickListener {
             trackingToggle.toggle()
-            val enabled = trackingToggle.isChecked
-            prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, enabled).apply()
+            prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, trackingToggle.isChecked).apply()
         }
 
         view.findViewById<LinearLayout>(R.id.cookieManageBtn).setOnClickListener {
@@ -403,21 +366,14 @@ class MainActivity : AppCompatActivity() {
             showCookieManager()
         }
 
-        view.findViewById<TextView>(R.id.closeMenuBtn).setOnClickListener {
-            dialog.dismiss()
-        }
+        view.findViewById<TextView>(R.id.closeMenuBtn).setOnClickListener { dialog.dismiss() }
 
         dialog.show()
     }
 
     private fun updateZoomLevelText(textView: TextView) {
-        val fragment = getCurrentWebViewFragment()
-        if (fragment != null) {
-            val scale = fragment.getZoomLevel()
-            textView.text = "${(scale * 100).toInt()}%"
-        } else {
-            textView.text = "100%"
-        }
+        val scale = getCurrentWebViewFragment()?.getZoomLevel() ?: 1.0f
+        textView.text = "${(scale * 100).toInt()}%"
     }
 
     private fun showCookieManager() {
@@ -425,7 +381,7 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_cookies, null)
         dialog.setContentView(view)
 
-        val blockToggle = view.findViewById<SwitchCompat>(R.id.blockThirdPartyToggle)
+        val blockToggle: SwitchCompat = view.findViewById(R.id.blockThirdPartyToggle)
         blockToggle.isChecked = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true)
 
         view.findViewById<LinearLayout>(R.id.blockThirdPartyRow).setOnClickListener {
@@ -434,7 +390,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         view.findViewById<LinearLayout>(R.id.clearCookiesBtn).setOnClickListener {
-            clearCurrentSiteCookies()
+            getCurrentWebViewFragment()?.getUrl()?.let { url ->
+                Uri.parse(url).host?.let { domain ->
+                    clearCookiesForDomain(domain)
+                    Toast.makeText(this, "Cookies cleared for $domain", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         view.findViewById<ImageButton>(R.id.backBtn).setOnClickListener {
@@ -443,17 +404,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
-    }
-
-    private fun clearCurrentSiteCookies() {
-        val url = getCurrentWebViewFragment()?.getUrl()
-        if (url != null) {
-            val domain = Uri.parse(url).host
-            if (domain != null) {
-                clearCookiesForDomain(domain)
-                Toast.makeText(this, "Cookies cleared for $domain", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun clearCookiesForDomain(domain: String) {
@@ -467,13 +417,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 cookieManager.flush()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
-
-    // ================== BACK BUTTON ==================
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
@@ -490,89 +436,57 @@ class MainActivity : AppCompatActivity() {
 
     inner class TabPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
         override fun getItemCount(): Int = tabUrls.size
-
-        override fun createFragment(position: Int): Fragment {
-            return WebViewFragment.newInstance(tabUrls[position])
-        }
+        override fun createFragment(position: Int): Fragment = WebViewFragment.newInstance(tabUrls[position])
     }
 
-    inner class TabPreviewAdapter(
-        private var urls: List<String>,
-        private var titles: List<String>,
-        private var currentPosition: Int,
-        private val onTabClick: (Int) -> Unit,
-        private val onCloseClick: (Int) -> Unit
-    ) : RecyclerView.Adapter<TabPreviewAdapter.ViewHolder>() {
+    // Data class for tab
+    data class TabItem(val url: String, val title: String)
 
-        fun updateData(newUrls: List<String>, newTitles: List<String>, newCurrentPosition: Int) {
-            urls = newUrls
-            titles = newTitles
-            currentPosition = newCurrentPosition
-            notifyDataSetChanged()
+    // Simple Tab Adapter
+    inner class TabAdapter(
+        private val tabs: List<TabItem>,
+        private val selectedPosition: Int,
+        private val onTabSelected: (Int) -> Unit,
+        private val onTabClosed: (Int) -> Unit
+    ) : RecyclerView.Adapter<TabAdapter.TabViewHolder>() {
+
+        inner class TabViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            val titleText: TextView = itemView.findViewById(R.id.tabTitleText)
+            val closeBtn: ImageView = itemView.findViewById(R.id.closeBtn)
+            val selectedIndicator: View = itemView.findViewById(R.id.selectedIndicator)
         }
 
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-            private val closeBtn: ImageButton = view.findViewById(R.id.closeBtn)
-            private val titleText: TextView = view.findViewById(R.id.tabTitleText)
-            private val container: FrameLayout = view.findViewById(R.id.tabContainer)
-            private val selectedIndicator: View = view.findViewById(R.id.selectedIndicator)
-
-            init {
-                Log.d(TAG, "ViewHolder created for position")
-                
-                // Main container click - select tab
-                container.setOnClickListener {
-                    val pos = adapterPosition
-                    Log.d(TAG, "Container clicked at position: $pos")
-                    if (pos != RecyclerView.NO_POSITION) {
-                        onTabClick(pos)
-                    }
-                }
-
-                // Close button click
-                closeBtn.setOnClickListener {
-                    val pos = adapterPosition
-                    Log.d(TAG, "Close button clicked at position: $pos")
-                    if (pos != RecyclerView.NO_POSITION) {
-                        onCloseClick(pos)
-                    }
-                }
-            }
-
-            fun bind(url: String, title: String, isSelected: Boolean) {
-                val displayTitle = if (title.isNotEmpty() && title != "about:blank") {
-                    title
-                } else {
-                    try {
-                        Uri.parse(url).host ?: "Page"
-                    } catch (e: Exception) {
-                        "Page"
-                    }
-                }
-                titleText.text = displayTitle.take(15)
-                
-                // Show selected indicator
-                selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
-                
-                // Background color
-                container.setBackgroundColor(
-                    if (isSelected) Color.parseColor("#E3F2FD") else Color.WHITE
-                )
-            }
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TabViewHolder {
             val view = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_tab, parent, false)
-            return ViewHolder(view)
+            return TabViewHolder(view)
         }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            if (position < urls.size && position < titles.size) {
-                holder.bind(urls[position], titles[position], position == currentPosition)
+        override fun onBindViewHolder(holder: TabViewHolder, position: Int) {
+            val tab = tabs[position]
+            
+            // Set title
+            holder.titleText.text = tab.title.take(12)
+            
+            // Highlight selected
+            holder.selectedIndicator.visibility = if (position == selectedPosition) View.VISIBLE else View.GONE
+            holder.itemView.setBackgroundColor(
+                if (position == selectedPosition) Color.parseColor("#E3F2FD") else Color.WHITE
+            )
+
+            // Click on entire item to select tab
+            holder.itemView.setOnClickListener {
+                Log.d(TAG, "ItemView clicked at position: $position")
+                onTabSelected(position)
+            }
+
+            // Click on close button
+            holder.closeBtn.setOnClickListener {
+                Log.d(TAG, "CloseBtn clicked at position: $position")
+                onTabClosed(position)
             }
         }
 
-        override fun getItemCount(): Int = urls.size
+        override fun getItemCount(): Int = tabs.size
     }
 }
