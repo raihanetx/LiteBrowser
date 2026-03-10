@@ -8,6 +8,8 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +29,8 @@ import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class MainActivity : AppCompatActivity() {
+
+    private val TAG = "MainActivity"
 
     // UI
     private lateinit var urlEditText: EditText
@@ -77,7 +81,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewPager() {
-        // Initialize with one tab
         tabUrls.add("https://www.google.com")
         tabTitles.add("Google")
 
@@ -89,7 +92,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        // URL bar - navigate on Enter
         urlEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_GO) {
                 val input = urlEditText.text.toString().trim()
@@ -102,17 +104,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Tab button - show tab manager
         tabButton.setOnClickListener {
+            Log.d(TAG, "Tab button clicked")
             showTabManager()
         }
 
-        // Menu button - show options
         menuButton.setOnClickListener {
             showOptionsMenu()
         }
 
-        // Update URL when swiping tabs
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 updateUrlFromCurrentTab()
@@ -177,6 +177,7 @@ class MainActivity : AppCompatActivity() {
         pagerAdapter.notifyItemInserted(tabUrls.size - 1)
         viewPager.setCurrentItem(tabUrls.size - 1, true)
         updateTabBadge()
+        Log.d(TAG, "Added tab. Total: ${tabUrls.size}")
     }
 
     private fun closeTab(position: Int) {
@@ -198,11 +199,22 @@ class MainActivity : AppCompatActivity() {
 
         updateTabBadge()
 
-        // Adjust current tab position
         if (wasSelected) {
             val newPosition = if (wasLastTab) tabUrls.size - 1 else position
             viewPager.setCurrentItem(newPosition, false)
             updateUrlFromCurrentTab()
+        }
+        Log.d(TAG, "Closed tab $position. Total: ${tabUrls.size}")
+    }
+
+    private fun switchToTab(position: Int) {
+        Log.d(TAG, "Switching to tab $position")
+        if (position in 0 until tabUrls.size) {
+            viewPager.setCurrentItem(position, true)
+            // Post to ensure the switch completes
+            viewPager.postDelayed({
+                updateUrlFromCurrentTab()
+            }, 100)
         }
     }
 
@@ -213,7 +225,6 @@ class MainActivity : AppCompatActivity() {
     // ================== FRAGMENT CALLBACK ==================
 
     fun onFragmentCreated(fragment: WebViewFragment) {
-        // Find the position of this fragment
         for (i in 0 until tabUrls.size) {
             val f = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
             if (f == fragment) {
@@ -224,22 +235,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupFragmentCallbacks(position: Int, fragment: WebViewFragment) {
-        // Apply current settings
         applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
         applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
 
-        // URL change callback
         fragment.onUrlChange = { url ->
             if (viewPager.currentItem == position) {
                 urlEditText.setText(url)
             }
-            // Update stored URL
             if (position < tabUrls.size) {
                 tabUrls[position] = url
             }
         }
 
-        // Title change callback
         fragment.onTitleChange = { title ->
             if (position < tabTitles.size) {
                 tabTitles[position] = title
@@ -286,6 +293,7 @@ class MainActivity : AppCompatActivity() {
 
     // ================== BOTTOM SHEETS ==================
 
+    @SuppressLint("InflateParams")
     private fun showTabManager() {
         val dialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_tabs, null)
@@ -295,26 +303,24 @@ class MainActivity : AppCompatActivity() {
         val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
         val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
 
-        // Create adapter
+        Log.d(TAG, "Showing tab manager with ${tabUrls.size} tabs")
+
+        // Adapter with explicit click handling
         val adapter = TabPreviewAdapter(
             tabUrls.toList(),
             tabTitles.toList(),
             viewPager.currentItem,
             onTabClick = { position ->
-                // Switch to selected tab
-                viewPager.setCurrentItem(position, true)
-                updateUrlFromCurrentTab()
+                Log.d(TAG, "Tab clicked: $position")
+                Toast.makeText(this, "Switching to tab ${position + 1}", Toast.LENGTH_SHORT).show()
+                switchToTab(position)
                 dialog.dismiss()
             },
             onCloseClick = { position ->
+                Log.d(TAG, "Close clicked: $position")
                 closeTab(position)
-                // Refresh the adapter
                 if (tabUrls.isNotEmpty()) {
-                    (recyclerView.adapter as? TabPreviewAdapter)?.updateData(
-                        tabUrls.toList(),
-                        tabTitles.toList(),
-                        viewPager.currentItem
-                    )
+                    recyclerView.adapter?.notifyDataSetChanged()
                 } else {
                     dialog.dismiss()
                 }
@@ -329,7 +335,9 @@ class MainActivity : AppCompatActivity() {
             dialog.dismiss()
         }
 
-        doneBtn.setOnClickListener { dialog.dismiss() }
+        doneBtn.setOnClickListener { 
+            dialog.dismiss() 
+        }
 
         dialog.show()
     }
@@ -340,19 +348,15 @@ class MainActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.bottom_sheet_menu, null)
         dialog.setContentView(view)
 
-        // Zoom level text
         val zoomLevelText = view.findViewById<TextView>(R.id.zoomLevelText)
         updateZoomLevelText(zoomLevelText)
 
-        // Zoom buttons
         view.findViewById<ImageButton>(R.id.zoomInBtn).setOnClickListener {
             val fragment = getCurrentWebViewFragment()
             if (fragment != null) {
                 val success = fragment.zoomIn()
                 updateZoomLevelText(zoomLevelText)
                 Toast.makeText(this, if (success) "Zoomed in" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -362,19 +366,15 @@ class MainActivity : AppCompatActivity() {
                 val success = fragment.zoomOut()
                 updateZoomLevelText(zoomLevelText)
                 Toast.makeText(this, if (success) "Zoomed out" else "Zoom limit reached", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Refresh
         view.findViewById<LinearLayout>(R.id.refreshBtn).setOnClickListener {
             getCurrentWebViewFragment()?.reload()
             animateLoading()
             dialog.dismiss()
         }
 
-        // Desktop mode toggle
         val desktopToggle = view.findViewById<SwitchCompat>(R.id.desktopToggle)
         desktopToggle.isChecked = prefs.getBoolean(KEY_DESKTOP_MODE, false)
 
@@ -384,12 +384,11 @@ class MainActivity : AppCompatActivity() {
             prefs.edit().putBoolean(KEY_DESKTOP_MODE, enabled).apply()
             applyDesktopModeToAll(enabled)
             Toast.makeText(this,
-                if (enabled) "Desktop mode enabled - Reloading pages" else "Desktop mode disabled - Reloading pages",
+                if (enabled) "Desktop mode enabled" else "Desktop mode disabled",
                 Toast.LENGTH_SHORT
             ).show()
         }
 
-        // Tracking protection toggle
         val trackingToggle = view.findViewById<SwitchCompat>(R.id.trackingToggle)
         trackingToggle.isChecked = prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true)
 
@@ -397,19 +396,13 @@ class MainActivity : AppCompatActivity() {
             trackingToggle.toggle()
             val enabled = trackingToggle.isChecked
             prefs.edit().putBoolean(KEY_BLOCK_THIRD_PARTY, enabled).apply()
-            Toast.makeText(this,
-                if (enabled) "Tracking blocked" else "Tracking allowed",
-                Toast.LENGTH_SHORT
-            ).show()
         }
 
-        // Cookie management
         view.findViewById<LinearLayout>(R.id.cookieManageBtn).setOnClickListener {
             dialog.dismiss()
             showCookieManager()
         }
 
-        // Close button
         view.findViewById<TextView>(R.id.closeMenuBtn).setOnClickListener {
             dialog.dismiss()
         }
@@ -460,8 +453,6 @@ class MainActivity : AppCompatActivity() {
                 clearCookiesForDomain(domain)
                 Toast.makeText(this, "Cookies cleared for $domain", Toast.LENGTH_SHORT).show()
             }
-        } else {
-            Toast.makeText(this, "No page loaded", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -522,21 +513,26 @@ class MainActivity : AppCompatActivity() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             private val closeBtn: ImageButton = view.findViewById(R.id.closeBtn)
-            private val titleText: TextView? = view.findViewById(R.id.tabTitleText)
-            private val container: View? = view.findViewById(R.id.tabContainer)
+            private val titleText: TextView = view.findViewById(R.id.tabTitleText)
+            private val container: FrameLayout = view.findViewById(R.id.tabContainer)
+            private val selectedIndicator: View = view.findViewById(R.id.selectedIndicator)
 
             init {
-                // Tab click - select the tab
-                itemView.setOnClickListener {
+                Log.d(TAG, "ViewHolder created for position")
+                
+                // Main container click - select tab
+                container.setOnClickListener {
                     val pos = adapterPosition
+                    Log.d(TAG, "Container clicked at position: $pos")
                     if (pos != RecyclerView.NO_POSITION) {
                         onTabClick(pos)
                     }
                 }
-                
+
                 // Close button click
                 closeBtn.setOnClickListener {
                     val pos = adapterPosition
+                    Log.d(TAG, "Close button clicked at position: $pos")
                     if (pos != RecyclerView.NO_POSITION) {
                         onCloseClick(pos)
                     }
@@ -544,7 +540,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             fun bind(url: String, title: String, isSelected: Boolean) {
-                // Display title or URL shortened
                 val displayTitle = if (title.isNotEmpty() && title != "about:blank") {
                     title
                 } else {
@@ -554,10 +549,13 @@ class MainActivity : AppCompatActivity() {
                         "Page"
                     }
                 }
-                titleText?.text = displayTitle.take(15)
-
-                // Highlight selected tab
-                container?.setBackgroundColor(
+                titleText.text = displayTitle.take(15)
+                
+                // Show selected indicator
+                selectedIndicator.visibility = if (isSelected) View.VISIBLE else View.GONE
+                
+                // Background color
+                container.setBackgroundColor(
                     if (isSelected) Color.parseColor("#E3F2FD") else Color.WHITE
                 )
             }

@@ -37,7 +37,10 @@
             android:textColor="#007AFF"
             android:textStyle="bold"
             android:textSize="12sp"
-            android:padding="8dp" />
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true" />
 
         <TextView
             android:id="@+id/doneBtnTabs"
@@ -47,14 +50,20 @@
             android:textColor="#007AFF"
             android:textStyle="bold"
             android:textSize="12sp"
-            android:padding="8dp" />
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true" />
 
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tabsRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
-        android:orientation="horizontal" />
+        android:layout_height="wrap_content"
+        android:minHeight="130dp"
+        android:orientation="horizontal"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
 </LinearLayout>

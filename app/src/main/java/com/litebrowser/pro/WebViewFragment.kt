@@ -2,6 +2,7 @@ package com.litebrowser.pro
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -18,9 +19,9 @@ class WebViewFragment : Fragment() {
     var onTitleChange: ((String) -> Unit)? = null
 
     private var initialUrl: String? = null
-    private var desktopUserAgent: String = ""
     private var defaultUserAgent: String = ""
     private var isDesktopMode: Boolean = false
+    private var currentZoomLevel: Float = 1.0f
 
     companion object {
         private const val ARG_URL = "url"
@@ -36,7 +37,6 @@ class WebViewFragment : Fragment() {
         super.onCreate(savedInstanceState)
         initialUrl = arguments?.getString(ARG_URL)
         defaultUserAgent = WebSettings.getDefaultUserAgent(requireContext())
-        desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -66,6 +66,8 @@ class WebViewFragment : Fragment() {
                 cacheMode = WebSettings.LOAD_DEFAULT
                 textZoom = 100
             }
+
+            defaultUserAgent = settings.userAgentString
 
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -105,10 +107,10 @@ class WebViewFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        // Notify activity that fragment is ready
+        // Notify activity
         (activity as? MainActivity)?.onFragmentCreated(this)
         
-        // Load initial URL
+        // Load URL
         if (initialUrl != null && webViewInstance?.url == null) {
             webViewInstance?.loadUrl(initialUrl!!)
         }
@@ -149,7 +151,7 @@ class WebViewFragment : Fragment() {
         onTitleChange = null
     }
 
-    // Public methods
+    // Public API
     fun getWebView(): WebView? = webViewInstance
 
     fun loadUrl(url: String) {
@@ -180,6 +182,7 @@ class WebViewFragment : Fragment() {
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom < 200) {
                     wv.settings.textZoom = minOf(currentZoom + 10, 200)
+                    currentZoomLevel = wv.settings.textZoom / 100f
                     return true
                 }
                 false
@@ -196,6 +199,7 @@ class WebViewFragment : Fragment() {
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom > 50) {
                     wv.settings.textZoom = maxOf(currentZoom - 10, 50)
+                    currentZoomLevel = wv.settings.textZoom / 100f
                     return true
                 }
                 false
@@ -207,7 +211,7 @@ class WebViewFragment : Fragment() {
     }
 
     fun getZoomLevel(): Float {
-        return webViewInstance?.settings?.textZoom?.div(100f) ?: 1.0f
+        return webViewInstance?.settings?.textZoom?.div(100f) ?: currentZoomLevel
     }
 
     fun setDesktopMode(enable: Boolean, userAgent: String) {
@@ -217,9 +221,6 @@ class WebViewFragment : Fragment() {
                 wv.settings.userAgentString = userAgent
                 wv.settings.useWideViewPort = enable
                 wv.settings.loadWithOverviewMode = !enable
-                if (wv.url != null && wv.url != "about:blank") {
-                    wv.reload()
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
