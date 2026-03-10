@@ -1,4 +1,4 @@
-package com.litebrowser.app
+package com.litebrowser.pro
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap

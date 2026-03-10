@@ -1,4 +1,4 @@
-package com.litebrowser.app
+package com.litebrowser.pro
 
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity

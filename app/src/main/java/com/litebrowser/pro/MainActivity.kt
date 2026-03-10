@@ -1,4 +1,4 @@
-package com.litebrowser.app
+package com.litebrowser.pro
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
