@@ -528,7 +528,7 @@ class MainActivity : AppCompatActivity() {
             init {
                 // Tab click - select the tab
                 itemView.setOnClickListener {
-                    val pos = bindingAdapterPosition
+                    val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION) {
                         onTabClick(pos)
                     }
@@ -536,7 +536,7 @@ class MainActivity : AppCompatActivity() {
                 
                 // Close button click
                 closeBtn.setOnClickListener {
-                    val pos = bindingAdapterPosition
+                    val pos = adapterPosition
                     if (pos != RecyclerView.NO_POSITION) {
                         onCloseClick(pos)
                     }

@@ -12,8 +12,7 @@ import androidx.fragment.app.Fragment
 
 class WebViewFragment : Fragment() {
 
-    private var _webView: WebView? = null
-    private val webView: WebView get() = _webView!!
+    private var webViewInstance: WebView? = null
 
     var onUrlChange: ((String) -> Unit)? = null
     var onTitleChange: ((String) -> Unit)? = null
@@ -42,11 +41,11 @@ class WebViewFragment : Fragment() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        if (_webView != null) {
-            return _webView!!
+        if (webViewInstance != null) {
+            return webViewInstance!!
         }
 
-        _webView = WebView(requireContext()).apply {
+        webViewInstance = WebView(requireContext()).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -100,7 +99,7 @@ class WebViewFragment : Fragment() {
             }
         }
 
-        return _webView!!
+        return webViewInstance!!
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -110,23 +109,19 @@ class WebViewFragment : Fragment() {
         (activity as? MainActivity)?.onFragmentCreated(this)
         
         // Load initial URL
-        if (initialUrl != null && _webView?.url == null) {
-            _webView?.loadUrl(initialUrl!!)
+        if (initialUrl != null && webViewInstance?.url == null) {
+            webViewInstance?.loadUrl(initialUrl!!)
         }
     }
 
     override fun onResume() {
         super.onResume()
-        _webView?.onResume()
+        webViewInstance?.onResume()
     }
 
     override fun onPause() {
         super.onPause()
-        _webView?.onPause()
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
+        webViewInstance?.onPause()
     }
 
     override fun onDestroy() {
@@ -136,7 +131,7 @@ class WebViewFragment : Fragment() {
 
     private fun cleanupWebView() {
         try {
-            _webView?.apply {
+            webViewInstance?.apply {
                 stopLoading()
                 settings.javaScriptEnabled = false
                 clearHistory()
@@ -149,38 +144,38 @@ class WebViewFragment : Fragment() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        _webView = null
+        webViewInstance = null
         onUrlChange = null
         onTitleChange = null
     }
 
     // Public methods
-    fun getWebView(): WebView? = _webView
+    fun getWebView(): WebView? = webViewInstance
 
     fun loadUrl(url: String) {
-        _webView?.loadUrl(url)
+        webViewInstance?.loadUrl(url)
     }
 
-    fun getUrl(): String? = _webView?.url
+    fun getUrl(): String? = webViewInstance?.url
 
-    fun canGoBack(): Boolean = _webView?.canGoBack() ?: false
+    fun canGoBack(): Boolean = webViewInstance?.canGoBack() ?: false
 
     fun goBack() {
-        _webView?.let { if (it.canGoBack()) it.goBack() }
+        webViewInstance?.let { if (it.canGoBack()) it.goBack() }
     }
 
-    fun canGoForward(): Boolean = _webView?.canGoForward() ?: false
+    fun canGoForward(): Boolean = webViewInstance?.canGoForward() ?: false
 
     fun goForward() {
-        _webView?.let { if (it.canGoForward()) it.goForward() }
+        webViewInstance?.let { if (it.canGoForward()) it.goForward() }
     }
 
     fun reload() {
-        _webView?.reload()
+        webViewInstance?.reload()
     }
 
     fun zoomIn(): Boolean {
-        return _webView?.let { wv ->
+        return webViewInstance?.let { wv ->
             try {
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom < 200) {
@@ -196,7 +191,7 @@ class WebViewFragment : Fragment() {
     }
 
     fun zoomOut(): Boolean {
-        return _webView?.let { wv ->
+        return webViewInstance?.let { wv ->
             try {
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom > 50) {
@@ -212,11 +207,11 @@ class WebViewFragment : Fragment() {
     }
 
     fun getZoomLevel(): Float {
-        return _webView?.settings?.textZoom?.div(100f) ?: 1.0f
+        return webViewInstance?.settings?.textZoom?.div(100f) ?: 1.0f
     }
 
     fun setDesktopMode(enable: Boolean, userAgent: String) {
-        _webView?.let { wv ->
+        webViewInstance?.let { wv ->
             try {
                 isDesktopMode = enable
                 wv.settings.userAgentString = userAgent
@@ -233,5 +228,5 @@ class WebViewFragment : Fragment() {
 
     fun isDesktopModeEnabled(): Boolean = isDesktopMode
 
-    fun getTitle(): String? = _webView?.title
+    fun getTitle(): String? = webViewInstance?.title
 }
