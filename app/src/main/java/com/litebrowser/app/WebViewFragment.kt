@@ -6,18 +6,39 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.fragment.app.Fragment
 
 class WebViewFragment : Fragment() {
 
-    private var _webView: WebView? = null
-    val webView: WebView get() = _webView!!
+    lateinit var webView: WebView
+        private set
 
-    // Callbacks set by activity
     var onUrlChange: ((String) -> Unit)? = null
-    var onViewReady: ((WebViewFragment) -> Unit)? = null
+    var onTitleChange: ((String) -> Unit)? = null
+    var onProgress: ((Int) -> Unit)? = null
+
+    private var initialUrl: String? = null
+    private var position: Int = 0
+
+    companion object {
+        fun newInstance(url: String, position: Int): WebViewFragment {
+            return WebViewFragment().apply {
+                arguments = Bundle().apply {
+                    putString("url", url)
+                    putInt("position", position)
+                }
+            }
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        initialUrl = arguments?.getString("url")
+        position = arguments?.getInt("position", 0) ?: 0
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -25,7 +46,7 @@ class WebViewFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_webview, container, false)
-        _webView = view.findViewById(R.id.webView)
+        webView = view.findViewById(R.id.webView)
         setupWebView()
         return view
     }
@@ -38,6 +59,9 @@ class WebViewFragment : Fragment() {
             builtInZoomControls = true
             displayZoomControls = false
             setSupportZoom(true)
+            useWideViewPort = true
+            loadWithOverviewMode = true
+            setSupportMultipleWindows(true)
         }
 
         webView.webViewClient = object : WebViewClient() {
@@ -45,38 +69,41 @@ class WebViewFragment : Fragment() {
                 super.onPageStarted(view, url, favicon)
                 url?.let { onUrlChange?.invoke(it) }
             }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                view?.title?.let { onTitleChange?.invoke(it) }
+            }
+        }
+
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                onProgress?.invoke(newProgress)
+            }
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // Load initial URL from arguments
-        arguments?.getString("url")?.let { url ->
-            webView.loadUrl(url)
-        }
-        // Notify activity that fragment is ready
-        onViewReady?.invoke(this)
+        initialUrl?.let { webView.loadUrl(it) }
+        (activity as? MainActivity)?.onFragmentReady(position, this)
     }
 
     override fun onDestroyView() {
         webView.destroy()
-        _webView = null
         onUrlChange = null
-        onViewReady = null
+        onTitleChange = null
+        onProgress = null
         super.onDestroyView()
     }
 
-    // Public methods for activity to control this WebView
-    fun loadUrl(url: String) {
-        webView.loadUrl(url)
-    }
-
+    fun loadUrl(url: String) { webView.loadUrl(url) }
     fun canGoBack(): Boolean = webView.canGoBack()
-    fun goBack() = webView.goBack()
+    fun goBack() { webView.goBack() }
     fun canGoForward(): Boolean = webView.canGoForward()
-    fun goForward() = webView.goForward()
-    fun reload() = webView.reload()
-    fun zoomIn() = webView.zoomIn()
-    fun zoomOut() = webView.zoomOut()
+    fun goForward() { webView.goForward() }
+    fun reload() { webView.reload() }
+    fun zoomIn() { webView.zoomIn() }
+    fun zoomOut() { webView.zoomOut() }
     fun getUrl(): String? = webView.url
 }

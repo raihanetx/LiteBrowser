@@ -1,101 +1,124 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="@color/bg"
+    android:fitsSystemWindows="true">
 
-    <!-- URL Bar -->
+    <!-- Header -->
     <LinearLayout
+        android:id="@+id/headerContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        android:elevation="4dp">
 
-        <EditText
-            android:id="@+id/urlEditText"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:gravity="center_vertical">
+
+            <!-- Search Bar -->
+            <LinearLayout
+                android:id="@+id/searchBar"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_search_bar"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_search"
+                    android:layout_marginEnd="8dp" />
+
+                <EditText
+                    android:id="@+id/urlEditText"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:hint="Search or enter URL"
+                    android:textColorHint="@color/text_hint"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:imeOptions="actionGo"
+                    android:inputType="textUri"
+                    android:selectAllOnFocus="true" />
+
+            </LinearLayout>
+
+            <!-- Tab Button -->
+            <FrameLayout
+                android:id="@+id/tabButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackgroundBorderless">
+
+                <ImageButton
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_button_white"
+                    android:src="@drawable/ic_tabs"
+                    android:scaleType="center" />
+
+                <TextView
+                    android:id="@+id/tabBadge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="-2dp"
+                    android:layout_marginEnd="-2dp"
+                    android:background="@drawable/bg_badge"
+                    android:text="1"
+                    android:textColor="@android:color/white"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:gravity="center" />
+            </FrameLayout>
+
+            <!-- Menu Button -->
+            <ImageButton
+                android:id="@+id/menuButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_button_white"
+                android:src="@drawable/ic_menu"
+                android:scaleType="center" />
+
+        </LinearLayout>
+
+        <!-- Loading Progress Bar -->
+        <View
+            android:id="@+id/loadingProgress"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="Enter URL"
-            android:inputType="textUri"
-            android:singleLine="true" />
+            android:layout_height="2dp"
+            android:background="@color/primary"
+            android:visibility="invisible" />
 
-        <Button
-            android:id="@+id/goButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Go" />
     </LinearLayout>
 
-    <!-- Tab Layout -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:tabMode="scrollable"
-        app:tabGravity="fill"
-        android:background="?attr/colorPrimary"
-        app:tabTextColor="@android:color/white"
-        app:tabSelectedTextColor="@android:color/white"
-        app:tabIndicatorColor="@android:color/white" />
-
-    <!-- ViewPager2 for tab content -->
+    <!-- WebView Container (ViewPager2) -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_height="match_parent"
+        android:layout_marginTop="66dp"
+        android:background="@android:color/white" />
 
-    <!-- Bottom Controls -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="4dp">
-
-        <Button
-            android:id="@+id/backButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="←" />
-
-        <Button
-            android:id="@+id/forwardButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="→" />
-
-        <Button
-            android:id="@+id/refreshButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="↻" />
-
-        <Button
-            android:id="@+id/zoomInButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+" />
-
-        <Button
-            android:id="@+id/zoomOutButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="-" />
-
-        <Button
-            android:id="@+id/menuButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="⋮" />
-
-        <!-- New Tab Button -->
-        <Button
-            android:id="@+id/newTabButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+" />
-    </LinearLayout>
-</LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:layout_marginEnd="16dp">
+
+    <!-- Tab Icon -->
+    <LinearLayout
+        android:id="@+id/tabIcon"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:background="@drawable/bg_card"
+        android:elevation="2dp"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_globe"
+            android:alpha="0.6" />
+
+    </LinearLayout>
+
+    <!-- Close Button -->
+    <FrameLayout
+        android:id="@+id/closeBtn"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-4dp"
+        android:layout_marginEnd="-4dp"
+        android:background="@drawable/bg_close_circle"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_close" />
+
+    </FrameLayout>
+
+</FrameLayout>

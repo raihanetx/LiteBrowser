@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_bottom_sheet"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="40dp">
+
+    <!-- Handle -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_handle" />
+
+    <!-- Header with Back Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <ImageButton
+            android:id="@+id/backBtn"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_button_white"
+            android:src="@drawable/ic_arrow_left"
+            android:padding="8dp"
+            android:scaleType="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cookie Settings"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp" />
+
+    </LinearLayout>
+
+    <!-- Global Settings Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card">
+
+        <!-- Block Third-Party Cookies -->
+        <LinearLayout
+            android:id="@+id/blockThirdPartyRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Block Third-Party Cookies"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Recommended for privacy"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/blockThirdPartyToggle"
+                android:layout_width="42dp"
+                android:layout_height="26dp"
+                android:checked="true"
+                android:thumb="@drawable/bg_toggle_thumb"
+                android:track="@drawable/bg_toggle_track" />
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border_light" />
+
+        <!-- Clear All Cookies -->
+        <LinearLayout
+            android:id="@+id/clearCookiesBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:background="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Clear All Cookies"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Remove all site data"
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="10sp" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_trash" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Exceptions Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:layout_marginTop="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="EXCEPTIONS"
+                android:textColor="@color/text_tertiary"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+
+            <TextView
+                android:id="@+id/addExceptionBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+ Add Site"
+                android:textColor="@color/primary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Exceptions List -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/exceptionsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- Empty State -->
+        <LinearLayout
+            android:id="@+id/emptyExceptionsView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp">
+
+            <ImageView
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_cookie"
+                android:alpha="0.3" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="No sites allowed yet."
+                android:textColor="@color/text_tertiary"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
