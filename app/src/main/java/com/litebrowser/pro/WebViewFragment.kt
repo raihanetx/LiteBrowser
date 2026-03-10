@@ -15,10 +15,6 @@ class WebViewFragment : Fragment() {
     private var _webView: WebView? = null
     private val webView: WebView get() = _webView!!
 
-    // Public property to expose webView safely
-    val webViewProperty: WebView?
-        get() = _webView
-
     var onUrlChange: ((String) -> Unit)? = null
     var onTitleChange: ((String) -> Unit)? = null
 
@@ -46,7 +42,6 @@ class WebViewFragment : Fragment() {
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        // Reuse existing webView if available (for tab switching)
         if (_webView != null) {
             return _webView!!
         }
@@ -110,6 +105,11 @@ class WebViewFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        
+        // Notify activity that fragment is ready
+        (activity as? MainActivity)?.onFragmentCreated(this)
+        
+        // Load initial URL
         if (initialUrl != null && _webView?.url == null) {
             _webView?.loadUrl(initialUrl!!)
         }
@@ -126,8 +126,6 @@ class WebViewFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        // Don't destroy webView here - let onDestroy handle it
-        // This allows proper tab switching
         super.onDestroyView()
     }
 
@@ -156,7 +154,7 @@ class WebViewFragment : Fragment() {
         onTitleChange = null
     }
 
-    // Public methods for MainActivity to access
+    // Public methods
     fun getWebView(): WebView? = _webView
 
     fun loadUrl(url: String) {
@@ -184,12 +182,12 @@ class WebViewFragment : Fragment() {
     fun zoomIn(): Boolean {
         return _webView?.let { wv ->
             try {
-                // Use textZoom for more reliable zoom control
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom < 200) {
                     wv.settings.textZoom = minOf(currentZoom + 10, 200)
+                    return true
                 }
-                true
+                false
             } catch (e: Exception) {
                 e.printStackTrace()
                 false
@@ -200,12 +198,12 @@ class WebViewFragment : Fragment() {
     fun zoomOut(): Boolean {
         return _webView?.let { wv ->
             try {
-                // Use textZoom for more reliable zoom control
                 val currentZoom = wv.settings.textZoom
                 if (currentZoom > 50) {
                     wv.settings.textZoom = maxOf(currentZoom - 10, 50)
+                    return true
                 }
-                true
+                false
             } catch (e: Exception) {
                 e.printStackTrace()
                 false
@@ -224,7 +222,6 @@ class WebViewFragment : Fragment() {
                 wv.settings.userAgentString = userAgent
                 wv.settings.useWideViewPort = enable
                 wv.settings.loadWithOverviewMode = !enable
-                // Reload to apply new user agent
                 if (wv.url != null && wv.url != "about:blank") {
                     wv.reload()
                 }

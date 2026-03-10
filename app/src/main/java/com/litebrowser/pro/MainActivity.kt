@@ -41,9 +41,6 @@ class MainActivity : AppCompatActivity() {
     private val tabTitles = mutableListOf<String>()
     private lateinit var pagerAdapter: TabPagerAdapter
 
-    // Fragment tracking for proper lifecycle management
-    private val fragmentMap = mutableMapOf<Int, WebViewFragment>()
-
     // Settings
     private lateinit var prefs: SharedPreferences
     private lateinit var cookieManager: CookieManager
@@ -119,7 +116,6 @@ class MainActivity : AppCompatActivity() {
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 updateUrlFromCurrentTab()
-                applySettingsToCurrentFragment()
             }
         })
     }
@@ -141,21 +137,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getCurrentWebViewFragment(): WebViewFragment? {
-        val position = viewPager.currentItem
-        
-        // First try to get from our tracked map
-        fragmentMap[position]?.let { return it }
-        
-        // Fallback: try to find by tag (ViewPager2 uses "f{position}" format)
-        val tag = "f$position"
-        val fragment = supportFragmentManager.findFragmentByTag(tag) as? WebViewFragment
-        
-        // If found, update our map
-        if (fragment != null) {
-            fragmentMap[position] = fragment
-        }
-        
-        return fragment
+        return supportFragmentManager.findFragmentByTag("f${viewPager.currentItem}") as? WebViewFragment
     }
 
     private fun updateUrlFromCurrentTab() {
@@ -206,21 +188,6 @@ class MainActivity : AppCompatActivity() {
         val wasSelected = viewPager.currentItem == position
         val wasLastTab = position == tabUrls.size - 1
 
-        // Remove from tracking map
-        fragmentMap.remove(position)
-        
-        // Shift fragments in map for positions after the removed one
-        val updatedMap = mutableMapOf<Int, WebViewFragment>()
-        fragmentMap.forEach { (pos, fragment) ->
-            if (pos > position) {
-                updatedMap[pos - 1] = fragment
-            } else {
-                updatedMap[pos] = fragment
-            }
-        }
-        fragmentMap.clear()
-        fragmentMap.putAll(updatedMap)
-
         tabUrls.removeAt(position)
         tabTitles.removeAt(position)
         pagerAdapter.notifyItemRemoved(position)
@@ -239,23 +206,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun selectTab(position: Int) {
-        if (position in 0 until tabUrls.size) {
-            viewPager.setCurrentItem(position, true)
-            updateUrlFromCurrentTab()
-        }
-    }
-
     private fun updateTabBadge() {
         tabBadge.text = tabUrls.size.toString()
     }
 
     // ================== FRAGMENT CALLBACK ==================
 
-    fun onFragmentReady(position: Int, fragment: WebViewFragment) {
-        // Track the fragment
-        fragmentMap[position] = fragment
-        
+    fun onFragmentCreated(fragment: WebViewFragment) {
+        // Find the position of this fragment
+        for (i in 0 until tabUrls.size) {
+            val f = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
+            if (f == fragment) {
+                setupFragmentCallbacks(i, fragment)
+                break
+            }
+        }
+    }
+
+    private fun setupFragmentCallbacks(position: Int, fragment: WebViewFragment) {
         // Apply current settings
         applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
         applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
@@ -277,12 +245,6 @@ class MainActivity : AppCompatActivity() {
                 tabTitles[position] = title
             }
         }
-    }
-
-    private fun applySettingsToCurrentFragment() {
-        val fragment = getCurrentWebViewFragment() ?: return
-        applyDesktopMode(fragment, prefs.getBoolean(KEY_DESKTOP_MODE, false))
-        applyThirdPartyCookieBlocking(fragment, prefs.getBoolean(KEY_BLOCK_THIRD_PARTY, true))
     }
 
     // ================== SETTINGS ==================
@@ -313,18 +275,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyDesktopModeToAll(enable: Boolean) {
-        val ua = if (enable) {
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        } else {
-            defaultUserAgent
-        }
-
-        // Apply to tracked fragments
         for (i in tabUrls.indices) {
-            val fragment = fragmentMap[i] 
-                ?: (supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment)
-            
-            fragment?.setDesktopMode(enable, ua)
+            val fragment = supportFragmentManager.findFragmentByTag("f$i") as? WebViewFragment
+            fragment?.let {
+                applyDesktopMode(it, enable)
+                it.reload()
+            }
         }
     }
 
@@ -339,7 +295,34 @@ class MainActivity : AppCompatActivity() {
         val addTabBtn = view.findViewById<TextView>(R.id.addTabBtn)
         val doneBtn = view.findViewById<TextView>(R.id.doneBtnTabs)
 
-        refreshTabAdapter(recyclerView, dialog)
+        // Create adapter
+        val adapter = TabPreviewAdapter(
+            tabUrls.toList(),
+            tabTitles.toList(),
+            viewPager.currentItem,
+            onTabClick = { position ->
+                // Switch to selected tab
+                viewPager.setCurrentItem(position, true)
+                updateUrlFromCurrentTab()
+                dialog.dismiss()
+            },
+            onCloseClick = { position ->
+                closeTab(position)
+                // Refresh the adapter
+                if (tabUrls.isNotEmpty()) {
+                    (recyclerView.adapter as? TabPreviewAdapter)?.updateData(
+                        tabUrls.toList(),
+                        tabTitles.toList(),
+                        viewPager.currentItem
+                    )
+                } else {
+                    dialog.dismiss()
+                }
+            }
+        )
+
+        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        recyclerView.adapter = adapter
 
         addTabBtn.setOnClickListener {
             addTab()
@@ -349,29 +332,6 @@ class MainActivity : AppCompatActivity() {
         doneBtn.setOnClickListener { dialog.dismiss() }
 
         dialog.show()
-    }
-
-    private fun refreshTabAdapter(recyclerView: RecyclerView, dialog: BottomSheetDialog) {
-        val adapter = TabPreviewAdapter(
-            tabUrls.toList(),
-            tabTitles.toList(),
-            viewPager.currentItem,
-            onTabClick = { position ->
-                selectTab(position)
-                dialog.dismiss()
-            },
-            onCloseClick = { position ->
-                closeTab(position)
-                if (tabUrls.isNotEmpty()) {
-                    refreshTabAdapter(recyclerView, dialog)
-                } else {
-                    dialog.dismiss()
-                }
-            }
-        )
-
-        recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
-        recyclerView.adapter = adapter
     }
 
     @SuppressLint("UseSwitchCompatOrMaterialCode")
@@ -541,37 +501,44 @@ class MainActivity : AppCompatActivity() {
         override fun getItemCount(): Int = tabUrls.size
 
         override fun createFragment(position: Int): Fragment {
-            val fragment = WebViewFragment.newInstance(tabUrls[position])
-            // Fragment is ready, notify activity
-            fragment.postDelayed {
-                onFragmentReady(position, fragment)
-            }
-            return fragment
+            return WebViewFragment.newInstance(tabUrls[position])
         }
     }
 
     inner class TabPreviewAdapter(
-        private val urls: List<String>,
-        private val titles: List<String>,
-        private val currentPosition: Int,
+        private var urls: List<String>,
+        private var titles: List<String>,
+        private var currentPosition: Int,
         private val onTabClick: (Int) -> Unit,
         private val onCloseClick: (Int) -> Unit
     ) : RecyclerView.Adapter<TabPreviewAdapter.ViewHolder>() {
 
+        fun updateData(newUrls: List<String>, newTitles: List<String>, newCurrentPosition: Int) {
+            urls = newUrls
+            titles = newTitles
+            currentPosition = newCurrentPosition
+            notifyDataSetChanged()
+        }
+
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             private val closeBtn: ImageButton = view.findViewById(R.id.closeBtn)
             private val titleText: TextView? = view.findViewById(R.id.tabTitleText)
-            private val container: View = view.findViewById(R.id.tabContainer)
+            private val container: View? = view.findViewById(R.id.tabContainer)
 
             init {
+                // Tab click - select the tab
                 itemView.setOnClickListener {
-                    if (adapterPosition != RecyclerView.NO_POSITION) {
-                        onTabClick(adapterPosition)
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        onTabClick(pos)
                     }
                 }
+                
+                // Close button click
                 closeBtn.setOnClickListener {
-                    if (adapterPosition != RecyclerView.NO_POSITION) {
-                        onCloseClick(adapterPosition)
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) {
+                        onCloseClick(pos)
                     }
                 }
             }
@@ -591,7 +558,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Highlight selected tab
                 container?.setBackgroundColor(
-                    if (isSelected) Color.parseColor("#E3F2FD") else Color.parseColor("#FFFFFF")
+                    if (isSelected) Color.parseColor("#E3F2FD") else Color.WHITE
                 )
             }
         }
@@ -610,9 +577,4 @@ class MainActivity : AppCompatActivity() {
 
         override fun getItemCount(): Int = urls.size
     }
-}
-
-// Extension function to post with delay on Fragment
-private fun Fragment.postDelayed(delayMillis: Long = 50, action: () -> Unit) {
-    view?.postDelayed(action, delayMillis)
 }
